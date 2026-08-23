@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LLM 用量</string>
+    <string name="home_title">LLM 用量</string>
+    <string name="action_refresh">刷新</string>
+    <string name="add_account">添加账户</string>
+    <string name="edit_account">编辑账户</string>
+
+    <string name="empty_title">还没有账户</string>
+    <string name="empty_subtitle">添加 GLM、Kimi、MiniMax Coding Plan 或 DeepSeek 账户,在这里查看用量与余额</string>
+
+    <string name="type_coding_plan">Coding Plan</string>
+    <string name="type_payg">PAYG</string>
+    <string name="five_hour_label">5 小时窗口</string>
+    <string name="weekly_label">本周用量</string>
+    <string name="plan_level_fmt">%1$s 套餐</string>
+
+    <string name="granted_label">赠送</string>
+    <string name="topped_up_label">充值</string>
+    <string name="available">可用</string>
+    <string name="unavailable">不可用</string>
+
+    <string name="updated_fmt">%1$s更新</string>
+    <string name="never_refreshed">尚未刷新</string>
+
+    <string name="field_name">名称</string>
+    <string name="field_name_support">留空则使用提供商名称</string>
+    <string name="field_api_key">API Key</string>
+    <string name="hint_glm_key">在 open.bigmodel.cn 或 z.ai 控制台获取</string>
+    <string name="hint_deepseek_key">在 platform.deepseek.com 的 API Keys 页面获取</string>
+    <string name="error_key_required">请输入 API Key</string>
+    <string name="save_and_refresh">保存并刷新</string>
+
+    <string name="detail_title">账户详情</string>
+    <string name="history_title">用量趋势</string>
+    <string name="history_empty">保存后多刷新几次,即可生成趋势曲线</string>
+    <string name="snapshot_count_fmt">已记录 %1$d 次快照</string>
+    <string name="legend_five_hour">5 小时</string>
+    <string name="legend_weekly">本周</string>
+
+    <string name="delete_account">删除账户</string>
+    <string name="delete_confirm_title">删除账户?</string>
+    <string name="delete_confirm_text">将同时删除该账户的全部历史记录,此操作不可撤销。</string>
+    <string name="delete">删除</string>
+    <string name="cancel">取消</string>
+
+    <string name="tab_home">主页</string>
+    <string name="tab_trend">趋势</string>
+    <string name="tab_settings">设置</string>
+
+    <string name="hint_kimi_key">在 platform.kimi.com 获取 Kimi For Coding 专用 Key</string>
+    <string name="hint_minimax_key">MiniMax 开放平台控制台的 API Key</string>
+
+    <string name="settings_title">设置</string>
+    <string name="settings_appearance">外观</string>
+    <string name="settings_data">数据</string>
+    <string name="settings_clear_history">清空历史记录</string>
+    <string name="settings_clear_history_desc">删除全部账户的用量快照,账户与 Key 保留</string>
+    <string name="settings_clear_history_confirm">将删除全部账户的历史快照,此操作不可撤销。</string>
+    <string name="settings_about">关于</string>
+    <string name="settings_privacy_desc">API Key 仅存储在本机,所有请求直连官方接口</string>
+
+    <string name="trend_empty_title">还没有趋势数据</string>
+    <string name="trend_empty_subtitle">添加账户并刷新后,即可在这里查看用量趋势</string>
+    <string name="balance_history_title">余额</string>
+
+    <string name="refresh_failed_fmt">%1$d 个账户刷新失败</string>
+</resources>

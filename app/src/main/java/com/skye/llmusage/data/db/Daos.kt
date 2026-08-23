@@ -1,0 +1,50 @@
+package com.skye.llmusage.data.db
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.Query
+import androidx.room.Upsert
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface AccountDao {
+    @Query("SELECT * FROM accounts ORDER BY createdAt")
+    fun observeAll(): Flow<List<AccountEntity>>
+
+    @Query("SELECT * FROM accounts WHERE id = :id")
+    fun observe(id: Long): Flow<AccountEntity?>
+
+    @Query("SELECT * FROM accounts WHERE id = :id")
+    suspend fun get(id: Long): AccountEntity?
+
+    @Upsert
+    suspend fun upsert(account: AccountEntity): Long
+
+    @Query("UPDATE accounts SET lastRefreshMs = :ts, lastError = NULL WHERE id = :id")
+    suspend fun markRefreshed(id: Long, ts: Long)
+
+    @Query("UPDATE accounts SET lastError = :error WHERE id = :id")
+    suspend fun markError(id: Long, error: String)
+
+    @Query("DELETE FROM accounts WHERE id = :id")
+    suspend fun delete(id: Long)
+}
+
+@Dao
+interface SnapshotDao {
+    /** 每个账户最新一条快照 */
+    @Query("SELECT * FROM snapshots WHERE id IN (SELECT MAX(id) FROM snapshots GROUP BY accountId)")
+    fun observeLatest(): Flow<List<SnapshotEntity>>
+
+    @Query("SELECT * FROM snapshots WHERE accountId = :accountId ORDER BY timestamp")
+    fun observeFor(accountId: Long): Flow<List<SnapshotEntity>>
+
+    @Query("SELECT * FROM snapshots ORDER BY timestamp")
+    fun observeAll(): Flow<List<SnapshotEntity>>
+
+    @Query("DELETE FROM snapshots")
+    suspend fun clearAll()
+
+    @Insert
+    suspend fun insert(snapshot: SnapshotEntity)
+}
