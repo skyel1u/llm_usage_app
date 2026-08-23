@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -22,6 +23,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -49,21 +51,33 @@ fun TrendScreen(
         return
     }
 
-    Column(Modifier.fillMaxSize()) {
+    val account = accounts.firstOrNull { it.id == selectedAccountId }
+    // 图表点列表只在 history 变化时重算,滚动/重组不重复 mapNotNull
+    val fiveHourPoints = remember(history) {
+        history.mapNotNull { s -> s.fiveHourPct?.let { s.timestamp to it } }
+    }
+    val weeklyPoints = remember(history) {
+        history.mapNotNull { s -> s.weeklyPct?.let { s.timestamp to it } }
+    }
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .statusBarsPadding(),
+    ) {
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(vertical = 8.dp),
         ) {
-            items(accounts, key = { it.id }) { account ->
+            items(accounts, key = { it.id }) { acct ->
                 FilterChip(
-                    selected = account.id == selectedAccountId,
-                    onClick = { onSelectAccount(account.id) },
-                    label = { Text(account.name) },
+                    selected = acct.id == selectedAccountId,
+                    onClick = { onSelectAccount(acct.id) },
+                    label = { Text(acct.name) },
                 )
             }
         }
-
         LazyColumn(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -73,30 +87,28 @@ fun TrendScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            accounts.firstOrNull { it.id == selectedAccountId }?.name ?: "",
+                            account?.name ?: "",
                             style = MaterialTheme.typography.titleLarge,
                         )
                         Text(
-                            accounts.firstOrNull { it.id == selectedAccountId }?.provider?.displayName ?: "",
+                            account?.provider?.displayName ?: "",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    IconButton(onClick = { onRefresh(selectedAccountId ?: return@IconButton) }) {
+                    IconButton(onClick = { account?.let { onRefresh(it.id) } }) {
                         Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.action_refresh))
                     }
-                    IconButton(onClick = { selectedAccountId?.let(onEdit) }) {
+                    IconButton(onClick = { account?.let { onEdit(it.id) } }) {
                         Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.edit_account))
                     }
                 }
             }
 
-            if (history.any { it.fiveHourPct != null }) {
+            if (fiveHourPoints.isNotEmpty()) {
                 item {
                     TrendCard(title = stringResource(R.string.five_hour_label)) {
-                        HistoryChart(points = history.mapNotNull { s ->
-                            s.fiveHourPct?.let { s.timestamp to it }
-                        })
+                        HistoryChart(points = fiveHourPoints)
                         ChartLegend(
                             color = tierColor(50f),
                             label = stringResource(R.string.legend_five_hour),
@@ -104,12 +116,10 @@ fun TrendScreen(
                     }
                 }
             }
-            if (history.any { it.weeklyPct != null }) {
+            if (weeklyPoints.isNotEmpty()) {
                 item {
                     TrendCard(title = stringResource(R.string.weekly_label)) {
-                        HistoryChart(points = history.mapNotNull { s ->
-                            s.weeklyPct?.let { s.timestamp to it }
-                        })
+                        HistoryChart(points = weeklyPoints)
                         ChartLegend(
                             color = tierColor(50f),
                             label = stringResource(R.string.legend_weekly),
@@ -135,7 +145,7 @@ fun TrendScreen(
                     }
                 }
             }
-            if (history.none { it.fiveHourPct != null || it.weeklyPct != null || it.balanceTotal != null }) {
+            if (fiveHourPoints.isEmpty() && weeklyPoints.isEmpty() && history.none { it.balanceTotal != null }) {
                 item {
                     Text(
                         stringResource(R.string.history_empty),
@@ -164,12 +174,12 @@ private fun TrendCard(title: String, content: @Composable () -> Unit) {
         }
     }
 }
-
 @Composable
 private fun EmptyTrendState() {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .padding(32.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,

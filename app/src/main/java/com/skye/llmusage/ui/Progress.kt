@@ -39,11 +39,15 @@ import kotlinx.coroutines.delay
 fun FiveHourRing(tier: Tier, modifier: Modifier = Modifier, ringSize: Dp = 108.dp) {
     val trackColor = MaterialTheme.colorScheme.surfaceVariant
     val targetColor = tierColor(tier.pct)
+    val resetMs = tier.resetMs
     var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(tier.resetMs) {
-        while (true) {
-            nowMs = System.currentTimeMillis()
-            delay(30_000)
+    // 仅当有重置时间需要倒计时时才启动计时器,否则不空转
+    if (resetMs != null) {
+        LaunchedEffect(resetMs) {
+            while (true) {
+                nowMs = System.currentTimeMillis()
+                delay(30_000)
+            }
         }
     }
     val sweep by animateFloatAsState(
@@ -90,7 +94,7 @@ fun FiveHourRing(tier: Tier, modifier: Modifier = Modifier, ringSize: Dp = 108.d
         }
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("5 小时窗口", style = MaterialTheme.typography.titleSmall)
-            tier.resetMs?.let {
+            resetMs?.let {
                 Text(
                     Fmt.remaining(nowMs, it),
                     style = MaterialTheme.typography.bodyMedium,
@@ -104,11 +108,15 @@ fun FiveHourRing(tier: Tier, modifier: Modifier = Modifier, ringSize: Dp = 108.d
 /** 周限制线性进度条 */
 @Composable
 fun WeeklyBar(tier: Tier, modifier: Modifier = Modifier) {
+    val resetMs = tier.resetMs
     var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(tier.resetMs) {
-        while (true) {
-            nowMs = System.currentTimeMillis()
-            delay(30_000)
+    // 仅当有重置时间需要倒计时时才启动计时器,否则不空转
+    if (resetMs != null) {
+        LaunchedEffect(resetMs) {
+            while (true) {
+                nowMs = System.currentTimeMillis()
+                delay(30_000)
+            }
         }
     }
     val animated by animateFloatAsState(

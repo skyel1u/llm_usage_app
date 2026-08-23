@@ -14,11 +14,14 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.joinAll
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
+
+/** 每账户保留的快照上限:5 分钟自动刷新 → 7 天约 2000 条,封顶防无限增长 */
+private const val SNAPSHOT_LIMIT = 2000
 
 /** 刷新节流:成功数据 3 分钟内不重复请求 */
 private const val FRESH_MS = 3 * 60_000L
@@ -89,6 +92,7 @@ class UsageRepository(
                 }
             }
             snapshotDao.insert(snapshot)
+            snapshotDao.trim(account.id, SNAPSHOT_LIMIT)
             accountDao.markRefreshed(account.id, snapshot.timestamp)
         } catch (e: UsageException) {
             accountDao.markError(account.id, e.message ?: "未知错误")

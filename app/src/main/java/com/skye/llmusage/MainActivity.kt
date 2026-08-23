@@ -24,8 +24,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -91,13 +89,16 @@ private val TABS = listOf(
     TabItem(Routes.SETTINGS, R.string.tab_settings, Icons.Filled.Settings, Icons.Outlined.Settings),
 )
 
+/** 顶层路由集合:判定底部栏可见性;只分配一次,不随 AppNavHost 重组重建 */
+private val TAB_ROUTES = TABS.map { it.route }.toSet()
+
 /** 顶层结构:三 Tab 底部导航(主页 / 趋势 / 设置)+ 全屏子页(添加/详情/编辑) */
 @Composable
 private fun AppNavHost() {
     val navController = rememberNavController()
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
-    val showBottomBar = currentRoute in TABS.map { it.route }
+    val showBottomBar = currentRoute in TAB_ROUTES
 
     Scaffold(
         bottomBar = {
@@ -151,21 +152,13 @@ private fun AppNavHost() {
             composable(Routes.TREND) {
                 val vm: TrendViewModel = viewModel()
                 val accounts by vm.accounts.collectAsStateWithLifecycle()
-
-                // 默认选中第一个账户;用户切换后跨 Tab 旋转保持
-                var selectedId by rememberSaveable { mutableLongStateOf(-1L) }
-                if (selectedId == -1L) {
-                    accounts.firstOrNull()?.let { selectedId = it.id }
-                }
-                val validId = accounts.firstOrNull { it.id == selectedId }?.id
-                    ?: accounts.firstOrNull()?.id
-
-                val history by vm.history(validId ?: 0L).collectAsStateWithLifecycle(initialValue = emptyList())
+                val selectedId by vm.selectedAccountId.collectAsStateWithLifecycle()
+                val history by vm.history.collectAsStateWithLifecycle()
                 TrendScreen(
                     accounts = accounts,
-                    selectedAccountId = validId,
+                    selectedAccountId = selectedId,
                     history = history,
-                    onSelectAccount = { selectedId = it },
+                    onSelectAccount = vm::select,
                     onRefresh = vm::refresh,
                     onEdit = { navController.navigate(Routes.edit(it)) },
                 )

@@ -82,21 +82,28 @@ fun DetailScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),) {
 
-            if (history.any { it.fiveHourPct != null }) {
-                HistoryChart(points = history.mapNotNull { s -> s.fiveHourPct?.let { s.timestamp to it } })
+            val fiveHourPoints = remember(history) {
+                history.mapNotNull { s -> s.fiveHourPct?.let { s.timestamp to it } }
+            }
+            val weeklyPoints = remember(history) {
+                history.mapNotNull { s -> s.weeklyPct?.let { s.timestamp to it } }
+            }
+
+            if (fiveHourPoints.isNotEmpty()) {
+                HistoryChart(points = fiveHourPoints)
                 ChartLegend(
                     color = tierColor(50f),
                     label = stringResource(R.string.legend_five_hour),
                 )
             }
-            if (history.any { it.weeklyPct != null }) {
-                HistoryChart(points = history.mapNotNull { s -> s.weeklyPct?.let { s.timestamp to it } })
+            if (weeklyPoints.isNotEmpty()) {
+                HistoryChart(points = weeklyPoints)
                 ChartLegend(
                     color = tierColor(50f),
                     label = stringResource(R.string.legend_weekly),
                 )
             }
-            if (history.none { it.fiveHourPct != null || it.weeklyPct != null }) {
+            if (fiveHourPoints.isEmpty() && weeklyPoints.isEmpty()) {
                 Text(
                     stringResource(R.string.history_empty),
                     style = MaterialTheme.typography.bodyMedium,

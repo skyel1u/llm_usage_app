@@ -45,6 +45,15 @@ interface SnapshotDao {
     @Query("DELETE FROM snapshots")
     suspend fun clearAll()
 
+    /** 每账户只保留最近 [limit] 条快照(按 id 降序保留) */
+    @Query(
+        "DELETE FROM snapshots WHERE id IN (" +
+            "SELECT id FROM snapshots WHERE accountId = :accountId " +
+            "ORDER BY id DESC LIMIT -1 OFFSET :limit" +
+            ")",
+    )
+    suspend fun trim(accountId: Long, limit: Int)
+
     @Insert
     suspend fun insert(snapshot: SnapshotEntity)
 }
