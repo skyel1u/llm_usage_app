@@ -8,3 +8,4 @@ captures/
 PLAN.md
 .kotlin/
 app/build
+*.apk
