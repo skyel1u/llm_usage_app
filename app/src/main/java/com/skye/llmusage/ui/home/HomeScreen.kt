@@ -1,7 +1,16 @@
 package com.skye.llmusage.ui.home
 
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,10 +24,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.rounded.Bolt
-import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Savings
 import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.AssistChip
@@ -45,11 +54,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.graphics.graphicsLayer
 import com.skye.llmusage.R
 import com.skye.llmusage.data.AccountType
 import com.skye.llmusage.data.AccountUi
 import com.skye.llmusage.ui.FiveHourRing
+import com.skye.llmusage.ui.RefreshIcon
 import com.skye.llmusage.ui.WeeklyBar
 import com.skye.llmusage.util.Fmt
 import kotlinx.coroutines.delay
@@ -77,7 +86,11 @@ fun HomeScreen(
             )
         },
         floatingActionButton = {
-            if (state.accounts.isNotEmpty()) {
+            AnimatedVisibility(
+                visible = state.accounts.isNotEmpty(),
+                enter = fadeIn() + slideInVertically { it / 2 },
+                exit = fadeOut() + slideOutVertically { it / 2 },
+            ) {
                 ExtendedFloatingActionButton(
                     onClick = onAddAccount,
                     icon = { Icon(Icons.Filled.Add, contentDescription = null) },
@@ -93,47 +106,42 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            if (state.accounts.isEmpty()) {
-                EmptyState(onAddAccount)
-            } else {
-                LazyColumn(
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        start = 16.dp, end = 16.dp, top = 4.dp, bottom = 96.dp,
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    if (state.failedCount > 0) {
-                        item {
-                            RefreshFailedNotice(count = state.failedCount)
+            // 滚动状态提到 Crossfade 外:空态 ↔ 列表切换后仍保留滚动位置
+            val listState = rememberLazyListState()
+            Crossfade(
+                targetState = state.accounts.isEmpty(),
+                animationSpec = tween(300),
+                label = "homeContent",
+            ) { empty ->
+                if (empty) {
+                    EmptyState(onAddAccount)
+                } else {
+                    LazyColumn(
+                        state = listState,
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                            start = 16.dp, end = 16.dp, top = 4.dp, bottom = 96.dp,
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        if (state.failedCount > 0) {
+                            item {
+                                RefreshFailedNotice(count = state.failedCount, modifier = Modifier.animateItem())
+                            }
                         }
-                    }
-                    items(state.accounts, key = { it.id }) { account ->
-                        AccountCard(
-                            account = account,
-                            onClick = { onOpenAccount(account.id) },
-                        )
+                        items(state.accounts, key = { it.id }) { account ->
+                            AccountCard(
+                                account = account,
+                                onClick = { onOpenAccount(account.id) },
+                                modifier = Modifier.animateItem(),
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
-
-@Composable
-private fun RefreshIcon(spinning: Boolean) {
-    val angle by animateFloatAsState(
-        targetValue = if (spinning) 360f else 0f,
-        animationSpec = tween(900),
-        label = "refreshAngle",
-    )
-    Icon(
-        Icons.Rounded.Refresh,
-        contentDescription = stringResource(R.string.action_refresh),
-        modifier = Modifier.graphicsLayer { rotationZ = angle },
-    )
-}
-
 
 @Composable
 private fun EmptyState(onAdd: () -> Unit) {
@@ -172,9 +180,10 @@ private fun EmptyState(onAdd: () -> Unit) {
 }
 
 @Composable
-private fun RefreshFailedNotice(count: Int) {
+private fun RefreshFailedNotice(count: Int, modifier: Modifier = Modifier) {
     AssistChip(
         onClick = {},
+        modifier = modifier,
         label = { Text(stringResource(R.string.refresh_failed_fmt, count)) },
         leadingIcon = {
             Icon(Icons.Rounded.WarningAmber, contentDescription = null, Modifier.size(18.dp))
@@ -183,7 +192,7 @@ private fun RefreshFailedNotice(count: Int) {
 }
 
 @Composable
-fun AccountCard(account: AccountUi, onClick: () -> Unit) {
+fun AccountCard(account: AccountUi, onClick: () -> Unit, modifier: Modifier = Modifier) {
     var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(account.id) {
         while (true) {
@@ -193,12 +202,19 @@ fun AccountCard(account: AccountUi, onClick: () -> Unit) {
     }
     Card(
         onClick = onClick,
+        modifier = modifier,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
     ) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        // 刷新后错误提示/数据块的增删会引起高度变化,用尺寸动画避免生硬跳变
+        Column(
+            Modifier
+                .padding(20.dp)
+                .animateContentSize(spring(dampingRatio = 0.9f, stiffness = 300f)),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
             // 头部:名称 + 类型徽章
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -224,9 +240,13 @@ fun AccountCard(account: AccountUi, onClick: () -> Unit) {
                 AssistChip(onClick = onClick, label = { Text(label) })
             }
 
-            account.lastError?.let { error ->
+            AnimatedVisibility(
+                visible = account.lastError != null,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically(),
+            ) {
                 Text(
-                    error,
+                    account.lastError.orEmpty(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )

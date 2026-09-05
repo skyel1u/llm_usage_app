@@ -50,11 +50,13 @@ fun FiveHourRing(tier: Tier, modifier: Modifier = Modifier, ringSize: Dp = 108.d
             }
         }
     }
-    val sweep by animateFloatAsState(
-        targetValue = tier.pct.coerceIn(0f, 100f) / 100f * 360f,
+    // 只动画百分比一个值:扫过角度与中心文字由同一动画派生,避免文字先跳、环后到
+    val animatedPct by animateFloatAsState(
+        targetValue = tier.pct.coerceIn(0f, 100f),
         animationSpec = spring(dampingRatio = 0.85f, stiffness = 90f),
-        label = "sweep",
+        label = "fiveHourPct",
     )
+    val sweep = animatedPct / 100f * 360f
     val color = animateColorAsStateM3(targetColor)
 
     Row(
@@ -86,7 +88,7 @@ fun FiveHourRing(tier: Tier, modifier: Modifier = Modifier, ringSize: Dp = 108.d
                 )
             }
             Text(
-                text = Fmt.pct(tier.pct),
+                text = Fmt.pct(animatedPct),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = color,
@@ -119,10 +121,10 @@ fun WeeklyBar(tier: Tier, modifier: Modifier = Modifier) {
             }
         }
     }
-    val animated by animateFloatAsState(
-        targetValue = tier.pct.coerceIn(0f, 100f) / 100f,
+    val animatedPct by animateFloatAsState(
+        targetValue = tier.pct.coerceIn(0f, 100f),
         animationSpec = spring(dampingRatio = 0.85f, stiffness = 90f),
-        label = "weekly",
+        label = "weeklyPct",
     )
     val color = animateColorAsStateM3(tierColor(tier.pct))
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -133,7 +135,7 @@ fun WeeklyBar(tier: Tier, modifier: Modifier = Modifier) {
             Text("本周用量", style = MaterialTheme.typography.titleSmall)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    Fmt.pct(tier.pct),
+                    Fmt.pct(animatedPct),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = color,
@@ -148,7 +150,7 @@ fun WeeklyBar(tier: Tier, modifier: Modifier = Modifier) {
             }
         }
         LinearProgressIndicator(
-            progress = { animated },
+            progress = { animatedPct / 100f },
             color = color,
             trackColor = MaterialTheme.colorScheme.surfaceVariant,
             modifier = Modifier.fillMaxWidth(),

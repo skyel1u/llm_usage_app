@@ -154,10 +154,12 @@ private fun AppNavHost() {
                 val accounts by vm.accounts.collectAsStateWithLifecycle()
                 val selectedId by vm.selectedAccountId.collectAsStateWithLifecycle()
                 val history by vm.history.collectAsStateWithLifecycle()
+                val refreshing by vm.refreshing.collectAsStateWithLifecycle()
                 TrendScreen(
                     accounts = accounts,
                     selectedAccountId = selectedId,
                     history = history,
+                    refreshing = refreshing,
                     onSelectAccount = vm::select,
                     onRefresh = vm::refresh,
                     onEdit = { navController.navigate(Routes.edit(it)) },
@@ -193,9 +195,11 @@ private fun AppNavHost() {
                 val vm: DetailViewModel = viewModel()
                 val account by vm.account(accountId).collectAsStateWithLifecycle(initialValue = null)
                 val history by vm.history(accountId).collectAsStateWithLifecycle(initialValue = emptyList())
+                val refreshing by vm.refreshing.collectAsStateWithLifecycle()
                 DetailScreen(
                     account = account,
                     history = history,
+                    refreshing = refreshing,
                     onBack = { navController.popBackStack() },
                     onEdit = { navController.navigate(Routes.edit(it)) },
                     onDelete = {

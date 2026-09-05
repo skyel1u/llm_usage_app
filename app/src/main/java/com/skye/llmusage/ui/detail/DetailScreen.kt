@@ -13,7 +13,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -36,6 +35,7 @@ import com.skye.llmusage.data.AccountUi
 import com.skye.llmusage.data.db.SnapshotEntity
 import com.skye.llmusage.ui.ChartLegend
 import com.skye.llmusage.ui.HistoryChart
+import com.skye.llmusage.ui.RefreshIcon
 import com.skye.llmusage.ui.theme.tierColor
 
 /** 单账户详情:本地快照历史曲线(5h% / 周%),编辑/删除 */
@@ -44,6 +44,7 @@ import com.skye.llmusage.ui.theme.tierColor
 fun DetailScreen(
     account: AccountUi?,
     history: List<SnapshotEntity>,
+    refreshing: Boolean,
     onBack: () -> Unit,
     onEdit: (Long) -> Unit,
     onDelete: () -> Unit,
@@ -61,8 +62,8 @@ fun DetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onRefresh) {
-                        Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.action_refresh))
+                    IconButton(onClick = onRefresh, enabled = !refreshing) {
+                        RefreshIcon(spinning = refreshing)
                     }
                     IconButton(onClick = { account?.let { onEdit(it.id) } }) {
                         Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.edit_account))

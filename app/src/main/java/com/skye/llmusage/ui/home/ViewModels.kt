@@ -9,6 +9,7 @@ import com.skye.llmusage.data.UsageRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -35,19 +36,15 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
-    init {
-        viewModelScope.launch {
-            refreshing.value = true
-            // join:等 refreshAll(含全部子任务)真正结束再收起指示器,
-            // 否则按钮立刻重新启用,可重复触发并发刷新
-            repo.refreshAll(force = false).join()
-            refreshing.value = false
-        }
-    }
-
+    /**
+     * 手动刷新(顶栏按钮 / 下拉)。进入应用不再自动刷新,只展示本地缓存数据;
+     * 重入保护:按钮 disabled 只挡住按钮,下拉刷新仍可能再次触发。
+     */
     fun refresh() {
+        if (refreshing.value) return
         viewModelScope.launch {
             refreshing.value = true
+            // join:等 refreshAll(含全部子任务)真正结束再收起指示器
             repo.refreshAll(force = true).join()
             refreshing.value = false
         }
@@ -84,11 +81,19 @@ class EditViewModel(app: Application) : AndroidViewModel(app) {
 class DetailViewModel(app: Application) : AndroidViewModel(app) {
     private val repo: UsageRepository = (app as LlmUsageApp).repository
 
+    private val _refreshing = MutableStateFlow(false)
+    val refreshing: StateFlow<Boolean> = _refreshing.asStateFlow()
+
     fun account(id: Long) = repo.observeAccount(id)
     fun history(id: Long) = repo.observeHistory(id)
 
     fun refresh(id: Long) {
-        viewModelScope.launch { repo.refresh(id, force = true) }
+        if (_refreshing.value) return
+        viewModelScope.launch {
+            _refreshing.value = true
+            repo.refresh(id, force = true)
+            _refreshing.value = false
+        }
     }
 
     fun delete(id: Long, onDone: () -> Unit) {
@@ -113,6 +118,9 @@ class TrendViewModel(app: Application) : AndroidViewModel(app) {
 
     private val manualSelection = MutableStateFlow<Long?>(null)
 
+    private val _refreshing = MutableStateFlow(false)
+    val refreshing: StateFlow<Boolean> = _refreshing.asStateFlow()
+
     /** 手动选择优先;选中账户被删/列表变化失效时回退首个账户 */
     val selectedAccountId: StateFlow<Long?> =
         combine(accounts, manualSelection) { list, sel ->
@@ -130,6 +138,11 @@ class TrendViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun refresh(id: Long) {
-        viewModelScope.launch { repo.refresh(id, force = true) }
+        if (_refreshing.value) return
+        viewModelScope.launch {
+            _refreshing.value = true
+            repo.refresh(id, force = true)
+            _refreshing.value = false
+        }
     }
 }

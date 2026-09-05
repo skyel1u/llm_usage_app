@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -33,6 +32,7 @@ import com.skye.llmusage.data.AccountUi
 import com.skye.llmusage.data.db.SnapshotEntity
 import com.skye.llmusage.ui.ChartLegend
 import com.skye.llmusage.ui.HistoryChart
+import com.skye.llmusage.ui.RefreshIcon
 import com.skye.llmusage.ui.theme.tierColor
 import com.skye.llmusage.util.Fmt
 
@@ -42,6 +42,7 @@ fun TrendScreen(
     accounts: List<AccountUi>,
     selectedAccountId: Long?,
     history: List<SnapshotEntity>,
+    refreshing: Boolean,
     onSelectAccount: (Long) -> Unit,
     onRefresh: (Long) -> Unit,
     onEdit: (Long) -> Unit,
@@ -96,8 +97,11 @@ fun TrendScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    IconButton(onClick = { account?.let { onRefresh(it.id) } }) {
-                        Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.action_refresh))
+                    IconButton(
+                        onClick = { account?.let { onRefresh(it.id) } },
+                        enabled = !refreshing,
+                    ) {
+                        RefreshIcon(spinning = refreshing)
                     }
                     IconButton(onClick = { account?.let { onEdit(it.id) } }) {
                         Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.edit_account))
