@@ -28,6 +28,10 @@ interface AccountDao {
 
     @Query("DELETE FROM accounts WHERE id = :id")
     suspend fun delete(id: Long)
+
+    /** 同提供商 + 同 Key 的既有账户(排除自身),用于保存前查重 */
+    @Query("SELECT * FROM accounts WHERE provider = :provider AND apiKey = :apiKey AND id != :excludeId LIMIT 1")
+    suspend fun findByKey(provider: String, apiKey: String, excludeId: Long): AccountEntity?
 }
 
 @Dao

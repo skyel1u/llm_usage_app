@@ -56,6 +56,10 @@ class UsageRepository(
 
     suspend fun deleteAccount(id: Long) = accountDao.delete(id)
 
+    /** 保存前查重:同提供商 + 同 Key 的既有账户(排除自身);null 表示无冲突 */
+    suspend fun findDuplicateAccount(provider: String, apiKey: String, excludeId: Long): AccountEntity? =
+        accountDao.findByKey(provider, apiKey, excludeId)
+
     /**
      * 刷新一个账户:请求 → 写快照 → 更新账户状态。
      * force=false 时,若上次成功刷新在 FRESH_MS 内则跳过。
@@ -127,7 +131,7 @@ private fun CodingPlanUsage.toSnapshot(accountId: Long) = SnapshotEntity(
 private fun AccountEntity.toUi(latest: SnapshotEntity?): AccountUi = AccountUi(
     id = id,
     name = name,
-    type = AccountType.valueOf(type),
+    type = AccountType.of(type),
     provider = Provider.of(provider),
     lastRefreshMs = latest?.timestamp ?: lastRefreshMs,
     lastError = lastError,

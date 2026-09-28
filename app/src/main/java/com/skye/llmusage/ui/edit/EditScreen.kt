@@ -11,6 +11,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -23,6 +28,7 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,6 +42,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.skye.llmusage.R
 import com.skye.llmusage.data.AccountType
@@ -51,6 +58,9 @@ fun EditScreen(
     initialKey: String?,
     onBack: () -> Unit,
     onSave: (Long?, String, Provider, String) -> Unit,
+    duplicateName: String? = null,
+    onDismissDuplicate: () -> Unit = {},
+    onConfirmDuplicate: () -> Unit = {},
 ) {
     var type by rememberSaveable {
         mutableStateOf((initialProvider ?: Provider.GLM_CN).type.name)
@@ -61,6 +71,7 @@ fun EditScreen(
     var name by rememberSaveable { mutableStateOf(initialName ?: "") }
     var apiKey by rememberSaveable { mutableStateOf(initialKey ?: "") }
     var keyError by rememberSaveable { mutableStateOf(false) }
+    var showKey by rememberSaveable { mutableStateOf(false) }
 
     // 切换类型时,若当前提供商不属于该类型则重置为该类型第一个提供商
     LaunchedEffect(type) {
@@ -84,7 +95,10 @@ fun EditScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back),
+                        )
                     }
                 },
             )
@@ -160,7 +174,17 @@ fun EditScreen(
                     )
                 },
                 isError = keyError,
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    IconButton(onClick = { showKey = !showKey }) {
+                        Icon(
+                            if (showKey) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                            contentDescription = stringResource(
+                                if (showKey) R.string.hide_key else R.string.show_key,
+                            ),
+                        )
+                    }
+                },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -179,5 +203,19 @@ fun EditScreen(
                 Text(stringResource(R.string.save_and_refresh))
             }
         }
+    }
+
+    if (duplicateName != null) {
+        AlertDialog(
+            onDismissRequest = onDismissDuplicate,
+            title = { Text(stringResource(R.string.duplicate_key_title)) },
+            text = { Text(stringResource(R.string.duplicate_key_text, duplicateName)) },
+            confirmButton = {
+                TextButton(onClick = onConfirmDuplicate) { Text(stringResource(R.string.save_anyway)) }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismissDuplicate) { Text(stringResource(R.string.cancel)) }
+            },
+        )
     }
 }

@@ -1,5 +1,4 @@
 package com.skye.llmusage.ui.settings
-
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
@@ -21,6 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -43,7 +43,9 @@ import com.skye.llmusage.data.ThemeMode
 @Composable
 fun SettingsScreen(
     themeMode: ThemeMode,
+    dynamicColor: Boolean,
     onThemeChange: (ThemeMode) -> Unit,
+    onDynamicColorChange: (Boolean) -> Unit,
     onClearHistory: () -> Unit,
 ) {
     var showClearDialog by remember { mutableStateOf(false) }
@@ -81,8 +83,24 @@ fun SettingsScreen(
                 }
             }
 
-            HorizontalDivider()
-
+            // 动态取色(Android 12+ 跟随壁纸;关闭回退内置靛蓝色板)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.settings_dynamic_color),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Text(
+                        stringResource(R.string.settings_dynamic_color_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(checked = dynamicColor, onCheckedChange = onDynamicColorChange)
+            }
             // 数据
             Text(
                 stringResource(R.string.settings_data),

@@ -36,7 +36,9 @@ import com.skye.llmusage.data.db.SnapshotEntity
 import com.skye.llmusage.ui.ChartLegend
 import com.skye.llmusage.ui.HistoryChart
 import com.skye.llmusage.ui.RefreshIcon
+import com.skye.llmusage.ui.niceCeil
 import com.skye.llmusage.ui.theme.tierColor
+import com.skye.llmusage.util.Fmt
 
 /** 单账户详情:本地快照历史曲线(5h% / 周%),编辑/删除 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,7 +60,10 @@ fun DetailScreen(
                 title = { Text(stringResource(R.string.detail_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back),
+                        )
                     }
                 },
                 actions = {
@@ -89,6 +94,9 @@ fun DetailScreen(
             val weeklyPoints = remember(history) {
                 history.mapNotNull { s -> s.weeklyPct?.let { s.timestamp to it } }
             }
+            val balancePoints = remember(history) {
+                history.mapNotNull { s -> s.balanceTotal?.let { s.timestamp to it.toFloat() } }
+            }
 
             if (fiveHourPoints.isNotEmpty()) {
                 HistoryChart(points = fiveHourPoints)
@@ -104,7 +112,20 @@ fun DetailScreen(
                     label = stringResource(R.string.legend_weekly),
                 )
             }
-            if (fiveHourPoints.isEmpty() && weeklyPoints.isEmpty()) {
+            if (balancePoints.isNotEmpty()) {
+                val currency = history.lastOrNull { it.balanceCurrency != null }?.balanceCurrency
+                HistoryChart(
+                    points = balancePoints,
+                    yMax = niceCeil(balancePoints.maxOf { it.second }),
+                    formatY = { Fmt.moneyAxis(currency, it.toDouble()) },
+                    tooltip = { t, v -> "${Fmt.money(currency, v.toDouble())} · ${Fmt.formatAbsolute(t)}" },
+                )
+                ChartLegend(
+                    color = tierColor(50f),
+                    label = stringResource(R.string.balance_history_title),
+                )
+            }
+            if (fiveHourPoints.isEmpty() && weeklyPoints.isEmpty() && balancePoints.isEmpty()) {
                 Text(
                     stringResource(R.string.history_empty),
                     style = MaterialTheme.typography.bodyMedium,

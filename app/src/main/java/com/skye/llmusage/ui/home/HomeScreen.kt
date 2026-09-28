@@ -30,7 +30,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Savings
 import androidx.compose.material.icons.rounded.WarningAmber
-import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -181,14 +181,29 @@ private fun EmptyState(onAdd: () -> Unit) {
 
 @Composable
 private fun RefreshFailedNotice(count: Int, modifier: Modifier = Modifier) {
-    AssistChip(
-        onClick = {},
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.errorContainer,
         modifier = modifier,
-        label = { Text(stringResource(R.string.refresh_failed_fmt, count)) },
-        leadingIcon = {
-            Icon(Icons.Rounded.WarningAmber, contentDescription = null, Modifier.size(18.dp))
-        },
-    )
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+        ) {
+            Icon(
+                Icons.Rounded.WarningAmber,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                stringResource(R.string.refresh_failed_fmt, count),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+        }
+    }
 }
 
 @Composable
@@ -237,7 +252,17 @@ fun AccountCard(account: AccountUi, onClick: () -> Unit, modifier: Modifier = Mo
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
                 )
-                AssistChip(onClick = onClick, label = { Text(label) })
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                ) {
+                    Text(
+                        label,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                    )
+                }
             }
 
             AnimatedVisibility(
@@ -254,13 +279,13 @@ fun AccountCard(account: AccountUi, onClick: () -> Unit, modifier: Modifier = Mo
 
             when (account.type) {
                 AccountType.CODING_PLAN -> {
-                    account.level?.let {
-                        Text(
-                            "${account.provider.displayName} $it",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    // 始终显示提供商(Kimi/MiniMax 无套餐等级),有等级时追加
+                    Text(
+                        account.level?.let { "${account.provider.displayName} $it" }
+                            ?: account.provider.displayName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     val fiveHour = account.fiveHour
                     val weekly = account.weekly
                     if (fiveHour != null) FiveHourRing(fiveHour)

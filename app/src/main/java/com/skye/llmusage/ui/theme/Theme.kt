@@ -5,6 +5,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
@@ -18,7 +19,7 @@ private val IndigoDeep = Color(0xFF2E3B8F)
 private val OrangeWarn = Color(0xFFFF9F0A)
 private val RedAlert = Color(0xFFFF453A)
 
-private val LightScheme = darkColorScheme(primary = Indigo).copy(
+private val LightScheme = lightColorScheme(primary = Indigo).copy(
     primary = Indigo,
     onPrimary = Color.White,
     primaryContainer = IndigoDim,

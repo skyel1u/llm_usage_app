@@ -63,6 +63,21 @@
     <string name="trend_empty_title">还没有趋势数据</string>
     <string name="trend_empty_subtitle">添加账户并刷新后,即可在这里查看用量趋势</string>
     <string name="balance_history_title">余额</string>
+    <string name="heatmap_title">用量日历</string>
+    <string name="heatmap_legend_less">少</string>
+    <string name="heatmap_legend_more">多</string>
+    <string name="heatmap_day_pct_fmt">%1$s · 峰值 %2$d%%</string>
+    <string name="heatmap_day_snapshots_fmt">%1$s · %2$d 次快照</string>
+    <string name="heatmap_day_empty">%1$s · 无记录</string>
 
     <string name="refresh_failed_fmt">%1$d 个账户刷新失败</string>
+
+    <string name="action_back">返回</string>
+    <string name="show_key">显示 Key</string>
+    <string name="hide_key">隐藏 Key</string>
+    <string name="duplicate_key_title">API Key 已存在</string>
+    <string name="duplicate_key_text">该 API Key 已被账户「%1$s」使用,仍要保存吗?</string>
+    <string name="save_anyway">仍要保存</string>
+    <string name="settings_dynamic_color">动态取色</string>
+    <string name="settings_dynamic_color_desc">Android 12+ 跟随系统壁纸配色,关闭后使用内置色板</string>
 </resources>

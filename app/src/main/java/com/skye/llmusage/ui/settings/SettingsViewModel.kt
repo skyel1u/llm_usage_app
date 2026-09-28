@@ -22,6 +22,10 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { repo.setThemeMode(mode) }
     }
 
+    fun setDynamicColor(enabled: Boolean) {
+        viewModelScope.launch { repo.setDynamicColor(enabled) }
+    }
+
     fun clearHistory() {
         viewModelScope.launch { (getApplication<LlmUsageApp>()).repository.clearHistory() }
     }

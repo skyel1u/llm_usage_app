@@ -1,6 +1,7 @@
 package com.skye.llmusage.data
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -28,14 +29,24 @@ data class Settings(
 
 class SettingsRepository(private val context: Context) {
     private val themeKey = stringPreferencesKey("theme_mode")
+    private val dynamicColorKey = booleanPreferencesKey("dynamic_color")
 
     val settings: Flow<Settings> = context.dataStore.data.map { prefs ->
-        Settings(themeMode = ThemeMode.of(prefs[themeKey]))
+        Settings(
+            themeMode = ThemeMode.of(prefs[themeKey]),
+            dynamicColor = prefs[dynamicColorKey] ?: true,
+        )
     }
 
     suspend fun setThemeMode(mode: ThemeMode) {
         context.dataStore.edit { prefs ->
             if (mode == ThemeMode.SYSTEM) prefs.remove(themeKey) else prefs[themeKey] = mode.name
+        }
+    }
+
+    suspend fun setDynamicColor(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            if (enabled) prefs.remove(dynamicColorKey) else prefs[dynamicColorKey] = false
         }
     }
 }

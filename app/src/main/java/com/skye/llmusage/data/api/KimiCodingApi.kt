@@ -2,13 +2,10 @@ package com.skye.llmusage.data.api
 
 import com.skye.llmusage.data.CodingPlanUsage
 import com.skye.llmusage.data.Tier
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
 import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.time.Instant
 
 /**
@@ -40,23 +37,14 @@ object KimiCodingApi {
     private fun JsonPrimitive.doubleOrNullOr(): Double? = content.toDoubleOrNull()
 
     suspend fun fetch(client: OkHttpClient, apiKey: String): CodingPlanUsage =
-        withContext(Dispatchers.IO) {
-            val request = Request.Builder()
-                .url("https://api.kimi.com/coding/v1/usages")
-                .header("Authorization", "Bearer $apiKey")
-                .header("Accept", "application/json")
-                .build()
-
-            val body = client.newCall(request).await().use { resp ->
-                when (resp.code) {
-                    401, 403 -> throw UsageException("认证失败 (HTTP ${resp.code}),请检查 API Key")
-                }
-                if (!resp.isSuccessful) throw UsageException("HTTP ${resp.code}")
-                resp.body!!.string()
-            }
-
-            parseResponse(body)
-        }
+        parseResponse(
+            httpGet(
+                client,
+                "https://api.kimi.com/coding/v1/usages",
+                "Bearer $apiKey",
+                mapOf("Accept" to "application/json"),
+            ),
+        )
 
     internal fun parseResponse(body: String): CodingPlanUsage {
         val parsed = runCatching { json.decodeFromString<UsageResponse>(body) }

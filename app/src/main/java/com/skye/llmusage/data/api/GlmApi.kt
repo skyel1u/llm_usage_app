@@ -3,14 +3,10 @@ package com.skye.llmusage.data.api
 import com.skye.llmusage.data.CodingPlanUsage
 import com.skye.llmusage.data.Provider
 import com.skye.llmusage.data.Tier
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import okhttp3.Call
 import okhttp3.OkHttpClient
-import okhttp3.Request
 
 /**
  * GLM Coding Plan 配额查询。
@@ -42,23 +38,14 @@ object GlmApi {
     )
 
     suspend fun fetch(client: OkHttpClient, provider: Provider, apiKey: String): CodingPlanUsage =
-        withContext(Dispatchers.IO) {
-            val request = Request.Builder()
-                .url(provider.baseUrl + "/api/monitor/usage/quota/limit")
-                .header("Authorization", apiKey) // 智谱特殊:不带 Bearer
-                .header("Accept-Language", "en-US,en")
-                .build()
-
-            val body = client.newCall(request).await().use { resp ->
-                when (resp.code) {
-                    401, 403 -> throw UsageException("认证失败 (HTTP ${resp.code}),请检查 API Key")
-                }
-                if (!resp.isSuccessful) throw UsageException("HTTP ${resp.code}")
-                resp.body!!.string()
-            }
-
-            parseResponse(body)
-        }
+        parseResponse(
+            httpGet(
+                client,
+                provider.baseUrl + "/api/monitor/usage/quota/limit",
+                apiKey, // 智谱特殊:Authorization 为裸 key,无 Bearer 前缀
+                mapOf("Accept-Language" to "en-US,en"),
+            ),
+        )
 
     /** 解析响应体:校验 success/data 后交给 [parse];坏响应抛 UsageException */
     internal fun parseResponse(body: String): CodingPlanUsage {

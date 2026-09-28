@@ -36,13 +36,13 @@ import androidx.navigation.compose.rememberNavController
 import com.skye.llmusage.data.Provider
 import com.skye.llmusage.data.ThemeMode
 import com.skye.llmusage.ui.detail.DetailScreen
+import com.skye.llmusage.ui.detail.DetailViewModel
 import com.skye.llmusage.ui.detail.TrendScreen
+import com.skye.llmusage.ui.detail.TrendViewModel
 import com.skye.llmusage.ui.edit.EditScreen
+import com.skye.llmusage.ui.edit.EditViewModel
 import com.skye.llmusage.ui.home.HomeScreen
-import com.skye.llmusage.ui.home.DetailViewModel
-import com.skye.llmusage.ui.home.EditViewModel
 import com.skye.llmusage.ui.home.HomeViewModel
-import com.skye.llmusage.ui.home.TrendViewModel
 import com.skye.llmusage.ui.settings.SettingsScreen
 import com.skye.llmusage.ui.settings.SettingsViewModel
 import com.skye.llmusage.ui.theme.LlmUsageTheme
@@ -57,7 +57,7 @@ class MainActivity : ComponentActivity() {
             val settings by app.settingsRepository.settings.collectAsStateWithLifecycle(initialValue = null)
             val mode = settings?.themeMode ?: ThemeMode.SYSTEM
 
-            LlmUsageTheme(themeMode = mode) {
+            LlmUsageTheme(themeMode = mode, dynamicColor = settings?.dynamicColor ?: true) {
                 AppNavHost()
             }
         }
@@ -171,18 +171,24 @@ private fun AppNavHost() {
                 val settings by vm.settings.collectAsStateWithLifecycle()
                 SettingsScreen(
                     themeMode = settings.themeMode,
+                    dynamicColor = settings.dynamicColor,
                     onThemeChange = vm::setThemeMode,
+                    onDynamicColorChange = vm::setDynamicColor,
                     onClearHistory = vm::clearHistory,
                 )
             }
 
             composable(Routes.ADD) {
                 val vm: EditViewModel = viewModel()
+                val duplicate by vm.duplicateName.collectAsStateWithLifecycle()
                 EditScreen(
                     initialAccountId = null,
                     initialName = null,
                     initialProvider = null,
                     initialKey = null,
+                    duplicateName = duplicate,
+                    onDismissDuplicate = vm::dismissDuplicate,
+                    onConfirmDuplicate = vm::confirmDuplicate,
                     onBack = { navController.popBackStack() },
                     onSave = { id, name, provider, apiKey ->
                         vm.save(id, name, provider, apiKey) { navController.popBackStack() }
@@ -212,6 +218,7 @@ private fun AppNavHost() {
             composable(Routes.EDIT) { backStack ->
                 val accountId = backStack.arguments?.getString("accountId")?.toLongOrNull() ?: return@composable
                 val vm: EditViewModel = viewModel()
+                val duplicate by vm.duplicateName.collectAsStateWithLifecycle()
                 // 编辑模式需先读取账户;用仓储一次性取值
                 val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as LlmUsageApp
                 var loaded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Pair<String, Provider>?>(null) }
@@ -228,6 +235,9 @@ private fun AppNavHost() {
                         initialName = name,
                         initialProvider = provider,
                         initialKey = loadedKey,
+                        duplicateName = duplicate,
+                        onDismissDuplicate = vm::dismissDuplicate,
+                        onConfirmDuplicate = vm::confirmDuplicate,
                         onBack = { navController.popBackStack() },
                         onSave = { id, n, p, k ->
                             vm.save(id, n, p, k) { navController.popBackStack() }

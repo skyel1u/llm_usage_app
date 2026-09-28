@@ -29,4 +29,18 @@ class FmtTest {
         assertEquals("43%", Fmt.pct(42.5f))
         assertEquals("100%", Fmt.pct(99.9f))
     }
+
+    @Test
+    fun `money formats with locale-independent dot decimal`() {
+        assertEquals("¥110.50", Fmt.money("CNY", 110.5))
+        assertEquals("$3.20", Fmt.money("USD", 3.2))
+        assertEquals("¥5.00", Fmt.money(null, 5.0))
+        assertEquals("7.25 EUR", Fmt.money("EUR", 7.25))
+    }
+
+    @Test
+    fun `money axis keeps labels short`() {
+        assertEquals("¥233", Fmt.moneyAxis("CNY", 233.33))
+        assertEquals("$99.99", Fmt.moneyAxis("USD", 99.99))
+    }
 }

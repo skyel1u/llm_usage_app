@@ -3,7 +3,11 @@ package com.skye.llmusage.data
 /** 账户类型:Coding Plan(订阅套餐)或 PAYG(按量付费) */
 enum class AccountType(val label: String) {
     CODING_PLAN("Coding Plan"),
-    PAYG("PAYG"),
+    PAYG("PAYG");
+
+    companion object {
+        fun of(name: String?): AccountType = entries.firstOrNull { it.name == name } ?: CODING_PLAN
+    }
 }
 
 /** 提供商:仅支持已确认端点的官方站点 */

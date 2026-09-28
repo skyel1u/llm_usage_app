@@ -33,6 +33,8 @@ import com.skye.llmusage.data.db.SnapshotEntity
 import com.skye.llmusage.ui.ChartLegend
 import com.skye.llmusage.ui.HistoryChart
 import com.skye.llmusage.ui.RefreshIcon
+import com.skye.llmusage.ui.UsageHeatmap
+import com.skye.llmusage.ui.niceCeil
 import com.skye.llmusage.ui.theme.tierColor
 import com.skye.llmusage.util.Fmt
 
@@ -59,6 +61,9 @@ fun TrendScreen(
     }
     val weeklyPoints = remember(history) {
         history.mapNotNull { s -> s.weeklyPct?.let { s.timestamp to it } }
+    }
+    val balancePoints = remember(history) {
+        history.mapNotNull { s -> s.balanceTotal?.let { s.timestamp to it.toFloat() } }
     }
 
     Column(
@@ -109,6 +114,14 @@ fun TrendScreen(
                 }
             }
 
+            if (history.isNotEmpty()) {
+                item {
+                    TrendCard(title = stringResource(R.string.heatmap_title)) {
+                        UsageHeatmap(snapshots = history)
+                    }
+                }
+            }
+
             if (fiveHourPoints.isNotEmpty()) {
                 item {
                     TrendCard(title = stringResource(R.string.five_hour_label)) {
@@ -146,6 +159,17 @@ fun TrendScreen(
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        if (balancePoints.size >= 2) {
+                            val currency = history.lastOrNull { it.balanceCurrency != null }?.balanceCurrency
+                            HistoryChart(
+                                points = balancePoints,
+                                yMax = niceCeil(balancePoints.maxOf { it.second }),
+                                formatY = { Fmt.moneyAxis(currency, it.toDouble()) },
+                                tooltip = { t, v ->
+                                    "${Fmt.money(currency, v.toDouble())} · ${Fmt.formatAbsolute(t)}"
+                                },
+                            )
+                        }
                     }
                 }
             }
