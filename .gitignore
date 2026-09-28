@@ -9,3 +9,6 @@ PLAN.md
 .kotlin/
 app/build
 *.apk
+keystore.properties
+release.keystore
+*.jks
