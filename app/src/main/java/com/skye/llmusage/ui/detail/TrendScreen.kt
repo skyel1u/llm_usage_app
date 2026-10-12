@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -34,6 +35,8 @@ import com.skye.llmusage.ui.ChartLegend
 import com.skye.llmusage.ui.HistoryChart
 import com.skye.llmusage.ui.RefreshIcon
 import com.skye.llmusage.ui.UsageHeatmap
+import com.skye.llmusage.ui.glass.GlassConfig
+import com.skye.llmusage.ui.glass.GlassPanel
 import com.skye.llmusage.ui.niceCeil
 import com.skye.llmusage.ui.theme.tierColor
 import com.skye.llmusage.util.Fmt
@@ -90,28 +93,62 @@ fun TrendScreen(
             modifier = Modifier.fillMaxSize(),
         ) {
             item {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            account?.name ?: "",
-                            style = MaterialTheme.typography.titleLarge,
-                        )
-                        Text(
-                            account?.provider?.displayName ?: "",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    IconButton(
-                        onClick = { account?.let { onRefresh(it.id) } },
-                        enabled = !refreshing,
-                    ) {
-                        RefreshIcon(spinning = refreshing)
-                    }
-                    IconButton(onClick = { account?.let { onEdit(it.id) } }) {
-                        Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.edit_account))
-                    }
-                }
+                GlassPanel(
+                    key = "trend-header",
+                    config = GlassConfig.bar(),
+                    modifier = Modifier.fillMaxWidth(),
+                    classic = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    account?.name ?: "",
+                                    style = MaterialTheme.typography.titleLarge,
+                                )
+                                Text(
+                                    account?.provider?.displayName ?: "",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            IconButton(
+                                onClick = { account?.let { onRefresh(it.id) } },
+                                enabled = !refreshing,
+                            ) {
+                                RefreshIcon(spinning = refreshing)
+                            }
+                            IconButton(onClick = { account?.let { onEdit(it.id) } }) {
+                                Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.edit_account))
+                            }
+                        }
+                    },
+                    glass = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp),
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    account?.name ?: "",
+                                    style = MaterialTheme.typography.titleLarge,
+                                )
+                                Text(
+                                    account?.provider?.displayName ?: "",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            IconButton(
+                                onClick = { account?.let { onRefresh(it.id) } },
+                                enabled = !refreshing,
+                            ) {
+                                RefreshIcon(spinning = refreshing)
+                            }
+                            IconButton(onClick = { account?.let { onEdit(it.id) } }) {
+                                Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.edit_account))
+                            }
+                        }
+                    },
+                )
             }
 
             if (history.isNotEmpty()) {
@@ -188,11 +225,7 @@ fun TrendScreen(
 
 @Composable
 private fun TrendCard(title: String, content: @Composable () -> Unit) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-        ),
-    ) {
+    val body: @Composable () -> Unit = {
         Column(
             Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -201,6 +234,18 @@ private fun TrendCard(title: String, content: @Composable () -> Unit) {
             content()
         }
     }
+    GlassPanel(
+        key = "trend-card-$title",
+        config = GlassConfig.card(),
+        classic = {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                ),
+            ) { body() }
+        },
+        glass = { body() },
+    )
 }
 @Composable
 private fun EmptyTrendState() {

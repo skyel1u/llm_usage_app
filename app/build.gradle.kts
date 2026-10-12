@@ -16,8 +16,8 @@ android {
         applicationId = "com.skye.llmusage"
         minSdk = 26
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.1.0"
+        versionCode = 6
+        versionName = "1.2.0"
     }
     // 固定 release 签名:本地读仓库根 keystore.properties(gitignore),
     // CI 由 Secrets 生成同名文件;两边同一把 key,覆盖安装不再签名冲突。
@@ -91,6 +91,10 @@ dependencies {
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
+
+    // 液态玻璃效果:真实折射/色散(AGSL,仅 API 33+ 生效)。
+    // 用 1.0.3:≥1.0.4 的 AAR 要求 compileSdk 37,本项目为 36。
+    implementation("com.qmdeve.liquidglass:core:1.0.3")
     implementation("androidx.datastore:datastore-preferences:1.1.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 

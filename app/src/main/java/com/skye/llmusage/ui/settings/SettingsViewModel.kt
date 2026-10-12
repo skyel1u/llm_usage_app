@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.skye.llmusage.LlmUsageApp
+import com.skye.llmusage.data.AppStyle
 import com.skye.llmusage.data.Settings
 import com.skye.llmusage.data.SettingsRepository
 import com.skye.llmusage.data.ThemeMode
@@ -24,6 +25,10 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setDynamicColor(enabled: Boolean) {
         viewModelScope.launch { repo.setDynamicColor(enabled) }
+    }
+
+    fun setAppStyle(style: AppStyle) {
+        viewModelScope.launch { repo.setAppStyle(style) }
     }
 
     fun clearHistory() {

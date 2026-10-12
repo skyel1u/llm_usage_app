@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -22,12 +23,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.skye.llmusage.R
@@ -36,6 +39,8 @@ import com.skye.llmusage.data.db.SnapshotEntity
 import com.skye.llmusage.ui.ChartLegend
 import com.skye.llmusage.ui.HistoryChart
 import com.skye.llmusage.ui.RefreshIcon
+import com.skye.llmusage.ui.glass.GlassConfig
+import com.skye.llmusage.ui.glass.GlassPanel
 import com.skye.llmusage.ui.niceCeil
 import com.skye.llmusage.ui.theme.tierColor
 import com.skye.llmusage.util.Fmt
@@ -56,26 +61,46 @@ fun DetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.detail_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
-                        )
-                    }
+            val barTitle: @Composable () -> Unit = { Text(stringResource(R.string.detail_title)) }
+            val barNav: @Composable () -> Unit = {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.action_back),
+                    )
+                }
+            }
+            val barActions: @Composable () -> Unit = {
+                IconButton(onClick = onRefresh, enabled = !refreshing) {
+                    RefreshIcon(spinning = refreshing)
+                }
+                IconButton(onClick = { account?.let { onEdit(it.id) } }) {
+                    Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.edit_account))
+                }
+                IconButton(onClick = { showDelete = true }) {
+                    Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.delete_account))
+                }
+            }
+            GlassPanel(
+                key = "detail-topbar",
+                config = GlassConfig.bar(),
+                modifier = Modifier.fillMaxWidth(),
+                classic = {
+                    TopAppBar(
+                        title = barTitle,
+                        navigationIcon = barNav,
+                        actions = { barActions() },
+                    )
                 },
-                actions = {
-                    IconButton(onClick = onRefresh, enabled = !refreshing) {
-                        RefreshIcon(spinning = refreshing)
-                    }
-                    IconButton(onClick = { account?.let { onEdit(it.id) } }) {
-                        Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.edit_account))
-                    }
-                    IconButton(onClick = { showDelete = true }) {
-                        Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.delete_account))
-                    }
+                glass = {
+                    TopAppBar(
+                        title = barTitle,
+                        navigationIcon = barNav,
+                        actions = { barActions() },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent,
+                        ),
+                    )
                 },
             )
         },
@@ -99,31 +124,37 @@ fun DetailScreen(
             }
 
             if (fiveHourPoints.isNotEmpty()) {
-                HistoryChart(points = fiveHourPoints)
-                ChartLegend(
-                    color = tierColor(50f),
-                    label = stringResource(R.string.legend_five_hour),
-                )
+                DetailChartPanel(key = "detail-chart-5h") {
+                    HistoryChart(points = fiveHourPoints)
+                    ChartLegend(
+                        color = tierColor(50f),
+                        label = stringResource(R.string.legend_five_hour),
+                    )
+                }
             }
             if (weeklyPoints.isNotEmpty()) {
-                HistoryChart(points = weeklyPoints)
-                ChartLegend(
-                    color = tierColor(50f),
-                    label = stringResource(R.string.legend_weekly),
-                )
+                DetailChartPanel(key = "detail-chart-weekly") {
+                    HistoryChart(points = weeklyPoints)
+                    ChartLegend(
+                        color = tierColor(50f),
+                        label = stringResource(R.string.legend_weekly),
+                    )
+                }
             }
             if (balancePoints.isNotEmpty()) {
                 val currency = history.lastOrNull { it.balanceCurrency != null }?.balanceCurrency
-                HistoryChart(
-                    points = balancePoints,
-                    yMax = niceCeil(balancePoints.maxOf { it.second }),
-                    formatY = { Fmt.moneyAxis(currency, it.toDouble()) },
-                    tooltip = { t, v -> "${Fmt.money(currency, v.toDouble())} · ${Fmt.formatAbsolute(t)}" },
-                )
-                ChartLegend(
-                    color = tierColor(50f),
-                    label = stringResource(R.string.balance_history_title),
-                )
+                DetailChartPanel(key = "detail-chart-balance") {
+                    HistoryChart(
+                        points = balancePoints,
+                        yMax = niceCeil(balancePoints.maxOf { it.second }),
+                        formatY = { Fmt.moneyAxis(currency, it.toDouble()) },
+                        tooltip = { t, v -> "${Fmt.money(currency, v.toDouble())} · ${Fmt.formatAbsolute(t)}" },
+                    )
+                    ChartLegend(
+                        color = tierColor(50f),
+                        label = stringResource(R.string.balance_history_title),
+                    )
+                }
             }
             if (fiveHourPoints.isEmpty() && weeklyPoints.isEmpty() && balancePoints.isEmpty()) {
                 Text(
@@ -154,4 +185,21 @@ fun DetailScreen(
             },
         )
     }
+}
+
+/** 详情页图表块:经典模式保持裸布局(外层 Column 已有 16dp 间距),玻璃模式包进面板 */
+@Composable
+private fun DetailChartPanel(key: String, content: @Composable () -> Unit) {
+    GlassPanel(
+        key = key,
+        config = GlassConfig.card(),
+        modifier = Modifier.fillMaxWidth(),
+        classic = { Column(verticalArrangement = Arrangement.spacedBy(16.dp)) { content() } },
+        glass = {
+            Column(
+                Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) { content() }
+        },
+    )
 }

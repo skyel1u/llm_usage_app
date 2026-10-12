@@ -80,4 +80,6 @@
     <string name="save_anyway">仍要保存</string>
     <string name="settings_dynamic_color">动态取色</string>
     <string name="settings_dynamic_color_desc">Android 12+ 跟随系统壁纸配色,关闭后使用内置色板</string>
+    <string name="settings_app_style">外观风格</string>
+    <string name="settings_liquid_glass_desc">iOS 风格液态玻璃,带真实折射与色散效果</string>
 </resources>

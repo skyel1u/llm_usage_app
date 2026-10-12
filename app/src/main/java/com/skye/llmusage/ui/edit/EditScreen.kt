@@ -30,6 +30,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -47,6 +49,8 @@ import androidx.compose.ui.unit.dp
 import com.skye.llmusage.R
 import com.skye.llmusage.data.AccountType
 import com.skye.llmusage.data.Provider
+import com.skye.llmusage.ui.glass.GlassConfig
+import com.skye.llmusage.ui.glass.GlassPanel
 
 /** 添加/编辑账户:类型 → 提供商 → 名称/Key */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,33 +89,42 @@ fun EditScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        stringResource(
-                            if (isEdit) R.string.edit_account else R.string.add_account,
+            val barTitle: @Composable () -> Unit = {
+                Text(
+                    stringResource(
+                        if (isEdit) R.string.edit_account else R.string.add_account,
+                    ),
+                )
+            }
+            val barNav: @Composable () -> Unit = {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.action_back),
+                    )
+                }
+            }
+            GlassPanel(
+                key = "edit-topbar",
+                config = GlassConfig.bar(),
+                modifier = Modifier.fillMaxWidth(),
+                classic = {
+                    TopAppBar(title = barTitle, navigationIcon = barNav)
+                },
+                glass = {
+                    TopAppBar(
+                        title = barTitle,
+                        navigationIcon = barNav,
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent,
                         ),
                     )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
-                        )
-                    }
                 },
             )
         },
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
+        // 表单字段块:经典模式为裸布局(外层 Column 已有 16dp 间距),玻璃模式包进面板
+        val fields: @Composable () -> Unit = {
             // 类型选择
             Text("账户类型", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
@@ -202,6 +215,28 @@ fun EditScreen(
             ) {
                 Text(stringResource(R.string.save_and_refresh))
             }
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            GlassPanel(
+                key = "edit-form",
+                config = GlassConfig.card(),
+                modifier = Modifier.fillMaxWidth(),
+                classic = { Column(verticalArrangement = Arrangement.spacedBy(16.dp)) { fields() } },
+                glass = {
+                    Column(
+                        Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) { fields() }
+                },
+            )
         }
     }
 

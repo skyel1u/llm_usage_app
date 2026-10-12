@@ -11,6 +11,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.rounded.Bolt
@@ -51,6 +53,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
@@ -60,6 +64,8 @@ import com.skye.llmusage.data.AccountUi
 import com.skye.llmusage.ui.FiveHourRing
 import com.skye.llmusage.ui.RefreshIcon
 import com.skye.llmusage.ui.WeeklyBar
+import com.skye.llmusage.ui.glass.GlassConfig
+import com.skye.llmusage.ui.glass.GlassPanel
 import com.skye.llmusage.util.Fmt
 import kotlinx.coroutines.delay
 
@@ -73,16 +79,34 @@ fun HomeScreen(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.home_title)) },
-                actions = {
-                    IconButton(onClick = onRefresh, enabled = !state.refreshing) {
-                        RefreshIcon(spinning = state.refreshing)
-                    }
+            val barTitle: @Composable () -> Unit = { Text(stringResource(R.string.home_title)) }
+            val barActions: @Composable () -> Unit = {
+                IconButton(onClick = onRefresh, enabled = !state.refreshing) {
+                    RefreshIcon(spinning = state.refreshing)
+                }
+            }
+            GlassPanel(
+                key = "home-topbar",
+                config = GlassConfig.bar(),
+                modifier = Modifier.fillMaxWidth(),
+                classic = {
+                    TopAppBar(
+                        title = barTitle,
+                        actions = { barActions() },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.background,
+                        ),
+                    )
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
+                glass = {
+                    TopAppBar(
+                        title = barTitle,
+                        actions = { barActions() },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent,
+                        ),
+                    )
+                },
             )
         },
         floatingActionButton = {
@@ -91,11 +115,7 @@ fun HomeScreen(
                 enter = fadeIn() + slideInVertically { it / 2 },
                 exit = fadeOut() + slideOutVertically { it / 2 },
             ) {
-                ExtendedFloatingActionButton(
-                    onClick = onAddAccount,
-                    icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                    text = { Text(stringResource(R.string.add_account)) },
-                )
+                GlassFab(onClick = onAddAccount, key = "home-fab")
             }
         },
     ) { padding ->
@@ -171,21 +191,51 @@ private fun EmptyState(onAdd: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(24.dp))
-        ExtendedFloatingActionButton(
-            onClick = onAdd,
-            icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-            text = { Text(stringResource(R.string.add_account)) },
-        )
+        GlassFab(onClick = onAdd, key = "empty-fab")
     }
+}
+
+/** 添加账户 FAB:经典模式为 M3 ExtendedFAB,玻璃模式为胶囊玻璃 */
+@Composable
+private fun GlassFab(onClick: () -> Unit, key: String) {
+    GlassPanel(
+        key = key,
+        config = GlassConfig.pill(),
+        floating = true,
+        classic = {
+            ExtendedFloatingActionButton(
+                onClick = onClick,
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                text = { Text(stringResource(R.string.add_account)) },
+            )
+        },
+        glass = {
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .clickable(onClick = onClick)
+                    .padding(horizontal = 20.dp, vertical = 15.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    Icons.Filled.Add,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    stringResource(R.string.add_account),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        },
+    )
 }
 
 @Composable
 private fun RefreshFailedNotice(count: Int, modifier: Modifier = Modifier) {
-    Surface(
-        shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.errorContainer,
-        modifier = modifier,
-    ) {
+    val row: @Composable () -> Unit = {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -204,6 +254,37 @@ private fun RefreshFailedNotice(count: Int, modifier: Modifier = Modifier) {
             )
         }
     }
+    GlassPanel(
+        key = "refresh-failed",
+        modifier = modifier,
+        config = GlassConfig.notice(),
+        classic = {
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.errorContainer,
+            ) { row() }
+        },
+        glass = {
+            // 玻璃面板自带暖红染色,文字直接用对比色
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            ) {
+                Icon(
+                    Icons.Rounded.WarningAmber,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    stringResource(R.string.refresh_failed_fmt, count),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        },
+    )
 }
 
 @Composable
@@ -215,15 +296,8 @@ fun AccountCard(account: AccountUi, onClick: () -> Unit, modifier: Modifier = Mo
             delay(60_000)
         }
     }
-    Card(
-        onClick = onClick,
-        modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-    ) {
-        // 刷新后错误提示/数据块的增删会引起高度变化,用尺寸动画避免生硬跳变
+    // 刷新后错误提示/数据块的增删会引起高度变化,用尺寸动画避免生硬跳变
+    val body: @Composable () -> Unit = {
         Column(
             Modifier
                 .padding(20.dp)
@@ -345,4 +419,26 @@ fun AccountCard(account: AccountUi, onClick: () -> Unit, modifier: Modifier = Mo
             )
         }
     }
+
+    GlassPanel(
+        key = "account-${account.id}",
+        modifier = modifier,
+        config = GlassConfig.card(),
+        classic = {
+            Card(
+                onClick = onClick,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+            ) { body() }
+        },
+        glass = {
+            Box(
+                Modifier
+                    .clip(RoundedCornerShape(24.dp))
+                    .clickable(onClick = onClick),
+            ) { body() }
+        },
+    )
 }

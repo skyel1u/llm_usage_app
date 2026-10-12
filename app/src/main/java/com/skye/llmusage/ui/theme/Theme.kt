@@ -9,8 +9,10 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.skye.llmusage.data.AppStyle
 import com.skye.llmusage.data.ThemeMode
 
 private val Indigo = Color(0xFF4355B9)
@@ -57,6 +59,48 @@ private val DarkScheme = darkColorScheme(primary = IndigoDim).copy(
     surfaceContainerHigh = Color(0xFF25252D),
 )
 
+// 液态玻璃模式:背景/表面透明,由窗口层的渐变背景 + 玻璃面板承托;
+// 容器色保持低不透明度,让玻璃面板间的区域也能透出渐变。
+private val GlassLightScheme = lightColorScheme(primary = Indigo).copy(
+    primary = Indigo,
+    onPrimary = Color.White,
+    primaryContainer = IndigoDim,
+    onPrimaryContainer = IndigoDeep,
+    secondary = Color(0xFF5B5D72),
+    secondaryContainer = Color(0xCCDFE3F9),
+    onSecondaryContainer = Color(0xFF181A2C),
+    background = Color.Transparent,
+    onBackground = Color(0xFF1B1B21),
+    surface = Color.Transparent,
+    onSurface = Color(0xFF1B1B21),
+    surfaceVariant = Color(0x66FFFFFF),
+    onSurfaceVariant = Color(0xFF46464F),
+    surfaceContainerLowest = Color(0x59FFFFFF),
+    surfaceContainer = Color(0x40FFFFFF),
+    surfaceContainerHigh = Color(0x66FFFFFF),
+    surfaceContainerHighest = Color(0x80FFFFFF),
+)
+
+private val GlassDarkScheme = darkColorScheme(primary = IndigoDim).copy(
+    primary = IndigoDim,
+    onPrimary = Color(0xFF10207A),
+    primaryContainer = IndigoDeep,
+    onPrimaryContainer = IndigoDim,
+    secondary = Color(0xFFC5C4DD),
+    secondaryContainer = Color(0x66343A63),
+    onSecondaryContainer = Color(0xFFE1E0FA),
+    background = Color.Transparent,
+    onBackground = Color(0xFFE4E1E9),
+    surface = Color.Transparent,
+    onSurface = Color(0xFFEDEBF5),
+    surfaceVariant = Color(0x33FFFFFF),
+    onSurfaceVariant = Color(0xFFC7C5D0),
+    surfaceContainerLowest = Color(0x401E2338),
+    surfaceContainer = Color(0x331E2338),
+    surfaceContainerHigh = Color(0x4D1E2338),
+    surfaceContainerHighest = Color(0x661E2338),
+)
+
 /** 阈值色:与参考实现一致,<70 主题色 / ≥70 橙 / ≥90 红 */
 @Composable
 fun tierColor(pct: Float): Color = when {
@@ -65,10 +109,14 @@ fun tierColor(pct: Float): Color = when {
     else -> MaterialTheme.colorScheme.primary
 }
 
+/** 液态玻璃外观当前是否生效(风格已选且系统支持) */
+val LocalGlassEnabled = staticCompositionLocalOf { false }
+
 @Composable
 fun LlmUsageTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     dynamicColor: Boolean = true,
+    appStyle: AppStyle = AppStyle.CLASSIC,
     content: @Composable () -> Unit,
 ) {
     val darkTheme = when (themeMode) {
@@ -76,8 +124,10 @@ fun LlmUsageTheme(
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
     }
+    val glassStyle = appStyle == AppStyle.LIQUID_GLASS
 
     val colorScheme: ColorScheme = when {
+        glassStyle -> if (darkTheme) GlassDarkScheme else GlassLightScheme
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)

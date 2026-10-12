@@ -22,19 +22,34 @@ enum class ThemeMode(val label: String) {
     }
 }
 
+/** 外观风格:经典 Material / iOS 液态玻璃(折射效果仅 Android 13+) */
+enum class AppStyle(val label: String) {
+    CLASSIC("经典"),
+    LIQUID_GLASS("液态玻璃"),
+    ;
+
+    companion object {
+        fun of(name: String?): AppStyle = entries.firstOrNull { it.name == name } ?: CLASSIC
+    }
+}
+
 data class Settings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val dynamicColor: Boolean = true,
+    val appStyle: AppStyle = AppStyle.CLASSIC,
 )
 
 class SettingsRepository(private val context: Context) {
     private val themeKey = stringPreferencesKey("theme_mode")
     private val dynamicColorKey = booleanPreferencesKey("dynamic_color")
 
+    private val appStyleKey = stringPreferencesKey("app_style")
+
     val settings: Flow<Settings> = context.dataStore.data.map { prefs ->
         Settings(
             themeMode = ThemeMode.of(prefs[themeKey]),
             dynamicColor = prefs[dynamicColorKey] ?: true,
+            appStyle = AppStyle.of(prefs[appStyleKey]),
         )
     }
 
@@ -47,6 +62,12 @@ class SettingsRepository(private val context: Context) {
     suspend fun setDynamicColor(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             if (enabled) prefs.remove(dynamicColorKey) else prefs[dynamicColorKey] = false
+        }
+    }
+
+    suspend fun setAppStyle(style: AppStyle) {
+        context.dataStore.edit { prefs ->
+            if (style == AppStyle.CLASSIC) prefs.remove(appStyleKey) else prefs[appStyleKey] = style.name
         }
     }
 }
