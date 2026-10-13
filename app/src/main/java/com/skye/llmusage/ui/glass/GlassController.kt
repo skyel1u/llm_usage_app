@@ -11,11 +11,15 @@ import kotlin.math.roundToInt
 data class GlassTint(val r: Float, val g: Float, val b: Float, val alpha: Float)
 
 /**
- * 单块玻璃面板的参数。dp/px 换算由控制器统一处理;
- * 明暗两套染色随主题切换自动应用。
+ * 玻璃面板参数。dp/px 换算由控制器统一处理;明暗两套染色随主题切换自动应用。
+ *
+ * 材质语义遵循 Apple Liquid Glass 双层结构:
+ * - CHROME(功能层):导航栏/Tab 胶囊/FAB 等悬浮控件,由 LiquidGlassView
+ *   实时折射+模糊其下方滚过的内容,叠加高光描边;
+ * - CARD(内容层):不透明的"纸面"卡片,不参与玻璃采样(避免玻璃叠玻璃)。
  */
 data class GlassConfig(
-    val cornerRadiusDp: Float = 24f,
+    val cornerRadiusDp: Float = 20f,
     val refractionHeightDp: Float = 20f,
     val refractionOffsetDp: Float = 70f,
     val blurRadiusPx: Float = 0.01f,
@@ -24,71 +28,61 @@ data class GlassConfig(
     val darkTint: GlassTint = GlassTint(0.09f, 0.10f, 0.18f, 0.32f),
 ) {
     companion object {
-        /** 内容卡片:仅折射不模糊,保证图表文字清晰且开销最小 */
-        fun card() = GlassConfig()
+        /** 内容卡片(CARD 材质):不透明纸面,仅取圆角等形状参数 */
+        fun card() = GlassConfig(cornerRadiusDp = 20f)
 
-        /** 顶栏/底栏:叠加一层磨砂模糊,接近 iOS 导航栏观感 */
-        fun bar() = GlassConfig(
-            cornerRadiusDp = 30f,
-            blurRadiusPx = 12f,
-            dispersion = 0.3f,
-            lightTint = GlassTint(1f, 1f, 1f, 0.22f),
-            darkTint = GlassTint(0.08f, 0.09f, 0.16f, 0.38f),
-        )
+        /** 错误提示条(CARD 材质) */
+        fun notice() = GlassConfig(cornerRadiusDp = 12f)
 
-        /** 胶囊(FAB 等小元素):圆角被库自动钳到高度一半,即成胶囊 */
-        fun pill() = GlassConfig(
+        /** 悬浮胶囊(CHROME 材质):Tab 栏 / FAB,圆角自动成胶囊 */
+        fun capsule() = GlassConfig(
             cornerRadiusDp = 99f,
             refractionHeightDp = 14f,
             refractionOffsetDp = 40f,
-            lightTint = GlassTint(1f, 1f, 1f, 0.20f),
-            darkTint = GlassTint(0.10f, 0.11f, 0.20f, 0.40f),
+            blurRadiusPx = 18f,
+            dispersion = 0.25f,
+            lightTint = GlassTint(1f, 1f, 1f, 0.10f),
+            darkTint = GlassTint(0.10f, 0.11f, 0.20f, 0.24f),
         )
 
-        /** 错误提示条 */
-        fun notice() = GlassConfig(
-            cornerRadiusDp = 12f,
-            refractionHeightDp = 14f,
-            refractionOffsetDp = 50f,
-            lightTint = GlassTint(1f, 0.42f, 0.38f, 0.24f),
-            darkTint = GlassTint(0.45f, 0.10f, 0.09f, 0.34f),
+        /** 顶栏(CHROME 材质):全宽无圆角,磨砂模糊滚动内容 */
+        fun topBar() = GlassConfig(
+            cornerRadiusDp = 0f,
+            refractionHeightDp = 18f,
+            refractionOffsetDp = 55f,
+            blurRadiusPx = 22f,
+            dispersion = 0.28f,
+            lightTint = GlassTint(1f, 1f, 1f, 0.16f),
+            darkTint = GlassTint(0.09f, 0.10f, 0.18f, 0.19f),
         )
     }
 }
 
 /**
- * 玻璃层协调器:管理背景采样源与两档玻璃宿主,Activity 持有一个实例。
+ * 玻璃层协调器:Activity 持有一个实例。
  *
- * 窗口层级(自底向上):
- * backgroundSource(静态渐变,采样源) → backHost(常规玻璃) → Compose 宿主(全部应用内容)
- * → frontHost(悬浮玻璃,如 FAB,需盖在内容之上)。
+ * 窗口层级(自底向上):Compose 宿主(壁纸 + 全部应用内容,即采样源) → glassHost。
+ * 玻璃视图必须位于采样源的兄弟图层——库的 record() 会把采样源整体录进
+ * RenderNode 且不排除玻璃自身,嵌套会造成反馈拖影。采样源为整个 Compose
+ * 宿主,因此玻璃折射/模糊的是真实滚过其下方的内容(Apple 的"内容穿层"行为)。
  *
- * 关键约束:LiquidGlassView 不能是采样源的后代——库的 record() 会把采样源整体
- * 录进 RenderNode 且不排除玻璃自身,嵌套会造成反馈拖影,故玻璃视图全部放在
- * 独立的兄弟宿主中;采样源只含静态渐变,逐帧录制成本可忽略。
- * 视图按 key 注册,占位 Composable 通过 updateBounds 同步位置/尺寸(滚动时仅改
- * translation,不触发布局);回收的视图进池复用,避免 LazyColumn 回收重建着色器。
+ * 视图按 key 注册,占位 Composable 通过 updateBounds 同步位置/尺寸(滚动时
+ * 仅改 translation,不触发布局);回收视图进池复用;setOpacity 支持导航栏
+ * "静止透明、滚动浮现"的渐隐渐现。
  */
-class GlassController(context: Context) {
+class GlassController(context: Context, private val source: ViewGroup) {
 
-    /** 玻璃折射的采样源 */
-    val backgroundSource: FrameLayout
-
-    /** 常规玻璃(卡片/栏),位于内容之下 */
-    val backHost: FrameLayout
-
-    /** 悬浮玻璃(FAB),位于内容之上 */
-    val frontHost: FrameLayout
+    /** 玻璃视图宿主,位于 Compose 宿主之上 */
+    val glassHost: FrameLayout
 
     private val density = context.resources.displayMetrics.density
-    private val gradient = GradientBlobView(context)
 
     private class Entry(
         val view: LiquidGlassView,
         var config: GlassConfig,
-        var floating: Boolean,
         var w: Int = -1,
         var h: Int = -1,
+        var alpha: Float = 1f,
     )
 
     private val entries = HashMap<Any, Entry>()
@@ -98,20 +92,14 @@ class GlassController(context: Context) {
     private var dark = false
 
     init {
-        backgroundSource = FrameLayout(context).apply {
-            addView(gradient, FrameLayout.LayoutParams(MATCH, MATCH))
-        }
-        backHost = FrameLayout(context)
-        frontHost = FrameLayout(context)
+        glassHost = FrameLayout(context)
     }
 
-    /** 由主组合的 SideEffect 驱动;风格开关/明暗切换时同步渐变与面板参数 */
+    /** 由主组合的 SideEffect 驱动;风格开关/明暗切换时同步面板参数 */
     fun setEnabled(enabled: Boolean, dark: Boolean) {
         if (enabled == active && dark == this.dark) return
         active = enabled
         this.dark = dark
-        gradient.setDark(dark)
-        backgroundSource.visibility = if (enabled) View.VISIBLE else View.GONE
         if (enabled) {
             entries.values.forEach(::applyConfig)
         } else {
@@ -120,25 +108,16 @@ class GlassController(context: Context) {
         }
     }
 
-    fun attach(key: Any, config: GlassConfig, floating: Boolean = false) {
+    fun attach(key: Any, config: GlassConfig) {
         var entry = entries[key]
         if (entry == null) {
             val view = if (pool.isNotEmpty()) pool.removeAt(pool.size - 1) else createView()
-            entry = Entry(view, config, floating)
+            entry = Entry(view, config)
             entries[key] = entry
+            glassHost.addView(view, FrameLayout.LayoutParams(0, 0))
+            view.visibility = View.GONE
         }
         entry.config = config
-        if (entry.floating != floating) {
-            // 池化复用可能换宿主:先从当前父容器摘下再挂到目标层
-            (entry.view.parent as? ViewGroup)?.removeView(entry.view)
-            entry.floating = floating
-            entry.w = -1
-            entry.h = -1
-        }
-        if (entry.view.parent == null) {
-            (if (floating) frontHost else backHost).addView(entry.view, FrameLayout.LayoutParams(0, 0))
-            entry.view.visibility = View.GONE
-        }
         if (active) applyConfig(entry)
     }
 
@@ -165,15 +144,27 @@ class GlassController(context: Context) {
         }
         entry.view.translationX = left
         entry.view.translationY = top
-        entry.view.visibility = View.VISIBLE
+        entry.view.visibility = if (entry.alpha <= 0.01f) View.INVISIBLE else View.VISIBLE
+    }
+
+    /** 玻璃不透明度:0 时隐藏视图(导航栏静止态) */
+    fun setOpacity(key: Any, alpha: Float) {
+        val entry = entries[key] ?: return
+        entry.alpha = alpha
+        entry.view.alpha = alpha
+        if (entry.w > 0) {
+            entry.view.visibility = if (alpha <= 0.01f) View.INVISIBLE else View.VISIBLE
+        }
     }
 
     private fun createView(): LiquidGlassView =
-        LiquidGlassView(backHost.context).apply { bind(backgroundSource) }
+        LiquidGlassView(glassHost.context).apply { bind(source) }
 
     private fun recycle(entry: Entry) {
-        (entry.view.parent as? ViewGroup)?.removeView(entry.view)
+        glassHost.removeView(entry.view)
         entry.view.visibility = View.GONE
+        entry.view.alpha = 1f
+        entry.alpha = 1f
         entry.w = -1
         entry.h = -1
         if (pool.size < POOL_CAP) pool.add(entry.view)
@@ -195,7 +186,6 @@ class GlassController(context: Context) {
     }
 
     private companion object {
-        const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
-        const val POOL_CAP = 12
+        const val POOL_CAP = 8
     }
 }

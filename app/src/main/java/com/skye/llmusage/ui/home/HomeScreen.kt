@@ -3,6 +3,8 @@ package com.skye.llmusage.ui.home
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -15,13 +17,17 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -32,7 +38,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Savings
 import androidx.compose.material.icons.rounded.WarningAmber
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,19 +46,22 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -65,7 +73,13 @@ import com.skye.llmusage.ui.FiveHourRing
 import com.skye.llmusage.ui.RefreshIcon
 import com.skye.llmusage.ui.WeeklyBar
 import com.skye.llmusage.ui.glass.GlassConfig
+import com.skye.llmusage.ui.glass.GlassMaterial
 import com.skye.llmusage.ui.glass.GlassPanel
+import com.skye.llmusage.ui.glass.LocalChromeLayer
+import com.skye.llmusage.ui.glass.LocalGlassChromeInset
+import com.skye.llmusage.ui.glass.LocalGlassController
+import com.skye.llmusage.ui.glass.pressableGlass
+import com.skye.llmusage.ui.theme.LocalGlassEnabled
 import com.skye.llmusage.util.Fmt
 import kotlinx.coroutines.delay
 
@@ -77,45 +91,132 @@ fun HomeScreen(
     onOpenAccount: (Long) -> Unit,
     onAddAccount: () -> Unit,
 ) {
-    Scaffold(
-        topBar = {
-            val barTitle: @Composable () -> Unit = { Text(stringResource(R.string.home_title)) }
-            val barActions: @Composable () -> Unit = {
-                IconButton(onClick = onRefresh, enabled = !state.refreshing) {
-                    RefreshIcon(spinning = state.refreshing)
+    if (LocalGlassEnabled.current && LocalGlassController.current != null) {
+        LiquidHomeScreen(state, onRefresh, onOpenAccount, onAddAccount)
+    } else {
+        ClassicHomeScreen(state, onRefresh, onOpenAccount, onAddAccount)
+    }
+}
+
+/**
+ * 玻璃模式主页(Apple 双层结构):内容层全屏滚动,从顶部导航栏与底部
+ * Tab 胶囊下方穿过;导航栏静止时透明,内容滚入后玻璃渐显。栏的前景文字
+ * 图标由 chrome 层渲染(位于玻璃之上,永不参与模糊)。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LiquidHomeScreen(
+    state: HomeUiState,
+    onRefresh: () -> Unit,
+    onOpenAccount: (Long) -> Unit,
+    onAddAccount: () -> Unit,
+) {
+    val listState = rememberLazyListState()
+    val scrolled by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 } }
+    val barAlpha by animateFloatAsState(
+        targetValue = if (scrolled) 1f else 0f,
+        animationSpec = tween(240),
+        label = "homeBar",
+    )
+    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val chromeInset = LocalGlassChromeInset.current
+    val chrome = LocalChromeLayer.current
+
+    SideEffect {
+        chrome?.topBar?.value = { HomeTopBar(onRefresh, state.refreshing, Color.Transparent) }
+        chrome?.topBarAlpha?.floatValue = barAlpha
+        chrome?.fab?.value = { GlassFabPanel(onAddAccount) }
+    }
+    DisposableEffect(chrome) {
+        onDispose {
+            chrome?.topBar?.value = null
+            chrome?.fab?.value = null
+        }
+    }
+
+    PullToRefreshBox(
+        isRefreshing = state.refreshing,
+        onRefresh = onRefresh,
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        Crossfade(
+            targetState = state.accounts.isEmpty(),
+            animationSpec = tween(300),
+            label = "homeContent",
+        ) { empty ->
+            if (empty) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(top = statusBarTop + 64.dp),
+                ) {
+                    EmptyState(onAddAccount, showFab = false)
+                }
+            } else {
+                LazyColumn(
+                    state = listState,
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = statusBarTop + 80.dp,
+                        bottom = chromeInset + 24.dp,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    if (state.failedCount > 0) {
+                        item {
+                            RefreshFailedNotice(
+                                count = state.failedCount,
+                                modifier = Modifier.animateItem(),
+                            )
+                        }
+                    }
+                    items(state.accounts, key = { it.id }) { account ->
+                        AccountCard(
+                            account = account,
+                            onClick = { onOpenAccount(account.id) },
+                            modifier = Modifier.animateItem(),
+                        )
+                    }
                 }
             }
-            GlassPanel(
-                key = "home-topbar",
-                config = GlassConfig.bar(),
-                modifier = Modifier.fillMaxWidth(),
-                classic = {
-                    TopAppBar(
-                        title = barTitle,
-                        actions = { barActions() },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.background,
-                        ),
-                    )
-                },
-                glass = {
-                    TopAppBar(
-                        title = barTitle,
-                        actions = { barActions() },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = Color.Transparent,
-                        ),
-                    )
-                },
-            )
+        }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun HomeTopBar(onRefresh: () -> Unit, refreshing: Boolean, container: Color) {
+    TopAppBar(
+        title = { Text(stringResource(R.string.home_title)) },
+        actions = {
+            IconButton(onClick = onRefresh, enabled = !refreshing) {
+                RefreshIcon(spinning = refreshing)
+            }
         },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = container),
+    )
+}
+
+/** 经典模式主页:与既有 Scaffold 布局完全一致 */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ClassicHomeScreen(
+    state: HomeUiState,
+    onRefresh: () -> Unit,
+    onOpenAccount: (Long) -> Unit,
+    onAddAccount: () -> Unit,
+) {
+    Scaffold(
+        topBar = { HomeTopBar(onRefresh, state.refreshing, MaterialTheme.colorScheme.background) },
         floatingActionButton = {
             AnimatedVisibility(
                 visible = state.accounts.isNotEmpty(),
                 enter = fadeIn() + slideInVertically { it / 2 },
                 exit = fadeOut() + slideOutVertically { it / 2 },
             ) {
-                GlassFab(onClick = onAddAccount, key = "home-fab")
+                ClassicFab(onClick = onAddAccount)
             }
         },
     ) { padding ->
@@ -138,7 +239,7 @@ fun HomeScreen(
                 } else {
                     LazyColumn(
                         state = listState,
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        contentPadding = PaddingValues(
                             start = 16.dp, end = 16.dp, top = 4.dp, bottom = 96.dp,
                         ),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -164,7 +265,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun EmptyState(onAdd: () -> Unit) {
+private fun EmptyState(onAdd: () -> Unit, showFab: Boolean = true) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -191,29 +292,33 @@ private fun EmptyState(onAdd: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(24.dp))
-        GlassFab(onClick = onAdd, key = "empty-fab")
+        if (showFab) ClassicFab(onClick = onAdd)
     }
 }
 
-/** 添加账户 FAB:经典模式为 M3 ExtendedFAB,玻璃模式为胶囊玻璃 */
+/** 经典模式添加账户 FAB(M3 ExtendedFAB) */
 @Composable
-private fun GlassFab(onClick: () -> Unit, key: String) {
+@OptIn(ExperimentalMaterial3Api::class)
+private fun ClassicFab(onClick: () -> Unit) {
+    ExtendedFloatingActionButton(
+        onClick = onClick,
+        icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+        text = { Text(stringResource(R.string.add_account)) },
+    )
+}
+
+/** 玻璃模式添加账户 FAB:胶囊玻璃 + 按压回弹,由 chrome 层渲染 */
+@Composable
+private fun GlassFabPanel(onClick: () -> Unit) {
     GlassPanel(
-        key = key,
-        config = GlassConfig.pill(),
-        floating = true,
-        classic = {
-            ExtendedFloatingActionButton(
-                onClick = onClick,
-                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                text = { Text(stringResource(R.string.add_account)) },
-            )
-        },
+        key = "home-fab",
+        config = GlassConfig.capsule(),
+        material = GlassMaterial.CHROME,
+        classic = {},
         glass = {
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .clickable(onClick = onClick)
+                    .pressableGlass(onClick = onClick)
                     .padding(horizontal = 20.dp, vertical = 15.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -265,7 +370,7 @@ private fun RefreshFailedNotice(count: Int, modifier: Modifier = Modifier) {
             ) { row() }
         },
         glass = {
-            // 玻璃面板自带暖红染色,文字直接用对比色
+            // 纸面卡片自带暖红染色,文字直接用对比色
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -300,11 +405,12 @@ fun AccountCard(account: AccountUi, onClick: () -> Unit, modifier: Modifier = Mo
     val body: @Composable () -> Unit = {
         Column(
             Modifier
+                .fillMaxWidth()
                 .padding(20.dp)
                 .animateContentSize(spring(dampingRatio = 0.9f, stiffness = 300f)),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            // 头部:名称 + 类型徽章
+            // 头部:名称 + 类型徽章;玻璃模式下徽章圆角与卡片曲率同心
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -327,7 +433,8 @@ fun AccountCard(account: AccountUi, onClick: () -> Unit, modifier: Modifier = Mo
                     modifier = Modifier.weight(1f),
                 )
                 Surface(
-                    shape = MaterialTheme.shapes.small,
+                    shape = if (LocalGlassEnabled.current) RoundedCornerShape(9.dp)
+                    else MaterialTheme.shapes.small,
                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 ) {
                     Text(
@@ -434,11 +541,8 @@ fun AccountCard(account: AccountUi, onClick: () -> Unit, modifier: Modifier = Mo
             ) { body() }
         },
         glass = {
-            Box(
-                Modifier
-                    .clip(RoundedCornerShape(24.dp))
-                    .clickable(onClick = onClick),
-            ) { body() }
+            // 面板提供纸面背景与裁剪,此处仅承接点击涟漪
+            Box(Modifier.clickable(onClick = onClick)) { body() }
         },
     )
 }

@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -37,7 +36,10 @@ import com.skye.llmusage.ui.RefreshIcon
 import com.skye.llmusage.ui.UsageHeatmap
 import com.skye.llmusage.ui.glass.GlassConfig
 import com.skye.llmusage.ui.glass.GlassPanel
+import com.skye.llmusage.ui.glass.LocalGlassChromeInset
+import com.skye.llmusage.ui.glass.LocalGlassController
 import com.skye.llmusage.ui.niceCeil
+import com.skye.llmusage.ui.theme.LocalGlassEnabled
 import com.skye.llmusage.ui.theme.tierColor
 import com.skye.llmusage.util.Fmt
 
@@ -69,6 +71,10 @@ fun TrendScreen(
         history.mapNotNull { s -> s.balanceTotal?.let { s.timestamp to it.toFloat() } }
     }
 
+    // 玻璃模式列表延伸到底部 Tab 胶囊下方滚动穿过,预留触达空间
+    val glass = LocalGlassEnabled.current && LocalGlassController.current != null
+    val bottomPadding = if (glass) LocalGlassChromeInset.current + 16.dp else 16.dp
+
     Column(
         Modifier
             .fillMaxSize()
@@ -88,67 +94,33 @@ fun TrendScreen(
             }
         }
         LazyColumn(
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = bottomPadding),
             verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.fillMaxSize(),
         ) {
             item {
-                GlassPanel(
-                    key = "trend-header",
-                    config = GlassConfig.bar(),
-                    modifier = Modifier.fillMaxWidth(),
-                    classic = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    account?.name ?: "",
-                                    style = MaterialTheme.typography.titleLarge,
-                                )
-                                Text(
-                                    account?.provider?.displayName ?: "",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            IconButton(
-                                onClick = { account?.let { onRefresh(it.id) } },
-                                enabled = !refreshing,
-                            ) {
-                                RefreshIcon(spinning = refreshing)
-                            }
-                            IconButton(onClick = { account?.let { onEdit(it.id) } }) {
-                                Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.edit_account))
-                            }
-                        }
-                    },
-                    glass = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp),
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    account?.name ?: "",
-                                    style = MaterialTheme.typography.titleLarge,
-                                )
-                                Text(
-                                    account?.provider?.displayName ?: "",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            IconButton(
-                                onClick = { account?.let { onRefresh(it.id) } },
-                                enabled = !refreshing,
-                            ) {
-                                RefreshIcon(spinning = refreshing)
-                            }
-                            IconButton(onClick = { account?.let { onEdit(it.id) } }) {
-                                Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.edit_account))
-                            }
-                        }
-                    },
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            account?.name ?: "",
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                        Text(
+                            account?.provider?.displayName ?: "",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    IconButton(
+                        onClick = { account?.let { onRefresh(it.id) } },
+                        enabled = !refreshing,
+                    ) {
+                        RefreshIcon(spinning = refreshing)
+                    }
+                    IconButton(onClick = { account?.let { onEdit(it.id) } }) {
+                        Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.edit_account))
+                    }
+                }
             }
 
             if (history.isNotEmpty()) {
