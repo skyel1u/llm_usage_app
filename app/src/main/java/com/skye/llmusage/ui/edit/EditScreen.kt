@@ -21,14 +21,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -60,10 +59,13 @@ import com.skye.llmusage.R
 import com.skye.llmusage.data.AccountType
 import com.skye.llmusage.data.Provider
 import com.skye.llmusage.ui.glass.GlassConfig
+import com.skye.llmusage.ui.glass.GlassAlertDialog
+import com.skye.llmusage.ui.glass.GlassFilterChip
 import com.skye.llmusage.ui.glass.GlassPanel
 import com.skye.llmusage.ui.glass.LocalChromeLayer
 import com.skye.llmusage.ui.glass.LocalGlassChromeInset
 import com.skye.llmusage.ui.glass.LocalGlassController
+import com.skye.llmusage.ui.glass.LocalGlassDark
 import com.skye.llmusage.ui.theme.LocalGlassEnabled
 
 /** 添加/编辑账户:类型 → 提供商 → 名称/Key */
@@ -128,7 +130,7 @@ fun EditScreen(
     }
 
     if (duplicateName != null) {
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = onDismissDuplicate,
             title = { Text(stringResource(R.string.duplicate_key_title)) },
             text = { Text(stringResource(R.string.duplicate_key_text, duplicateName)) },
@@ -172,13 +174,14 @@ private fun LiquidEditScreen(
     )
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val chrome = LocalChromeLayer.current
+    val chromeOwner = remember { Any() }
 
     SideEffect {
-        chrome?.topBar?.value = { EditTopBar(isEdit, onBack, useDefaults = false) }
+        chrome?.topBar?.set(chromeOwner) { EditTopBar(isEdit, onBack, useDefaults = false) }
         chrome?.topBarAlpha?.floatValue = barAlpha
     }
     DisposableEffect(chrome) {
-        onDispose { chrome?.topBar?.value = null }
+        onDispose { chrome?.topBar?.clear(chromeOwner) }
     }
 
     Column(
@@ -278,12 +281,23 @@ private fun EditFormFields(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         providers.forEach { p ->
-            FilterChip(
+            GlassFilterChip(
                 selected = provider == p.name,
                 onClick = { onProviderChange(p.name) },
                 label = { Text(p.displayName) },
             )
         }
+    }
+
+    // 玻璃模式输入框垫一层磨砂底,避免壁纸直透文字;经典模式保持默认
+    val fieldColors = if (LocalGlassEnabled.current) {
+        val container = if (LocalGlassDark.current) Color(0x331E2338) else Color(0x40FBFAFF)
+        OutlinedTextFieldDefaults.colors(
+            unfocusedContainerColor = container,
+            focusedContainerColor = container,
+        )
+    } else {
+        OutlinedTextFieldDefaults.colors()
     }
 
     OutlinedTextField(
@@ -292,6 +306,7 @@ private fun EditFormFields(
         label = { Text(stringResource(R.string.field_name)) },
         supportingText = { Text(stringResource(R.string.field_name_support)) },
         singleLine = true,
+        colors = fieldColors,
         modifier = Modifier.fillMaxWidth(),
     )
 
@@ -310,6 +325,7 @@ private fun EditFormFields(
             )
         },
         isError = keyError,
+        colors = fieldColors,
         visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
         trailingIcon = {
             IconButton(onClick = onToggleShowKey) {

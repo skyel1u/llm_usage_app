@@ -28,7 +28,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
-import androidx.compose.material3.ripple
 import com.skye.llmusage.ui.theme.LocalGlassEnabled
 
 /** 当前会话的玻璃协调器;由 MainActivity 在根组合中提供 */
@@ -123,10 +122,10 @@ fun GlassPanel(
     }
 }
 
-private val CardLightSurface = Color(0xF8FBFAFF)
-private val CardDarkSurface = Color(0xF20F1116)
-private val ShadowLight = Color(0x1E2E3B8F)
-private val ShadowDark = Color(0x66000000)
+internal val CardLightSurface = Color(0xF8FBFAFF)
+internal val CardDarkSurface = Color(0xF20F1116)
+internal val ShadowLight = Color(0x1E2E3B8F)
+internal val ShadowDark = Color(0x66000000)
 
 /**
  * 液态玻璃边缘处理(Apple 视觉签名):
@@ -167,7 +166,8 @@ private fun Modifier.liquidEdge(
 }
 
 /**
- * iOS 风格按压反馈:按下时轻微弹性收缩。玻璃 FAB / Tab 项等悬浮控件使用。
+ * iOS 风格按压反馈:按下时轻微弹性收缩。无涟漪(iOS 无此反馈),
+ * 避免矩形涟漪破坏玻璃胶囊的圆角轮廓。
  */
 @Composable
 fun Modifier.pressableGlass(onClick: () -> Unit, scaleDown: Float = 0.96f): Modifier {
@@ -183,5 +183,5 @@ fun Modifier.pressableGlass(onClick: () -> Unit, scaleDown: Float = 0.96f): Modi
     )
     return this
         .graphicsLayer { scaleX = scale; scaleY = scale }
-        .clickable(interactionSource = interaction, indication = ripple(), onClick = onClick)
+        .clickable(interactionSource = interaction, indication = null, onClick = onClick)
 }

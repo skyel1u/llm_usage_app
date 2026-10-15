@@ -13,6 +13,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +33,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -51,6 +53,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -62,6 +65,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -78,6 +82,8 @@ import com.skye.llmusage.ui.glass.GlassPanel
 import com.skye.llmusage.ui.glass.LocalChromeLayer
 import com.skye.llmusage.ui.glass.LocalGlassChromeInset
 import com.skye.llmusage.ui.glass.LocalGlassController
+import com.skye.llmusage.ui.glass.LocalGlassDark
+import com.skye.llmusage.ui.glass.PullRefreshChrome
 import com.skye.llmusage.ui.glass.pressableGlass
 import com.skye.llmusage.ui.theme.LocalGlassEnabled
 import com.skye.llmusage.util.Fmt
@@ -122,15 +128,19 @@ private fun LiquidHomeScreen(
     val chromeInset = LocalGlassChromeInset.current
     val chrome = LocalChromeLayer.current
 
+    val ptrState = rememberPullToRefreshState()
+    val chromeOwner = remember { Any() }
     SideEffect {
-        chrome?.topBar?.value = { HomeTopBar(onRefresh, state.refreshing, Color.Transparent) }
+        chrome?.topBar?.set(chromeOwner) { HomeTopBar(onRefresh, state.refreshing, Color.Transparent) }
         chrome?.topBarAlpha?.floatValue = barAlpha
-        chrome?.fab?.value = { GlassFabPanel(onAddAccount) }
+        chrome?.fab?.set(chromeOwner) { GlassFabPanel(onAddAccount) }
+        chrome?.pullRefresh?.set(chromeOwner, PullRefreshChrome(ptrState, state.refreshing))
     }
     DisposableEffect(chrome) {
         onDispose {
-            chrome?.topBar?.value = null
-            chrome?.fab?.value = null
+            chrome?.topBar?.clear(chromeOwner)
+            chrome?.fab?.clear(chromeOwner)
+            chrome?.pullRefresh?.clear(chromeOwner)
         }
     }
 
@@ -138,6 +148,9 @@ private fun LiquidHomeScreen(
         isRefreshing = state.refreshing,
         onRefresh = onRefresh,
         modifier = Modifier.fillMaxSize(),
+        state = ptrState,
+        // 默认指示器屏蔽,由 chrome 层渲染玻璃圆片样式
+        indicator = {},
     ) {
         Crossfade(
             targetState = state.accounts.isEmpty(),
@@ -273,12 +286,32 @@ private fun EmptyState(onAdd: () -> Unit, showFab: Boolean = true) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(
-            Icons.Rounded.Bolt,
-            contentDescription = null,
-            modifier = Modifier.size(56.dp),
-            tint = MaterialTheme.colorScheme.outline,
-        )
+        // 玻璃模式:磨砂圆盘承托图标;经典模式保持裸图标
+        if (LocalGlassEnabled.current) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(88.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (LocalGlassDark.current) Color(0x591E2338) else Color(0x59FBFAFF),
+                    ),
+            ) {
+                Icon(
+                    Icons.Rounded.Bolt,
+                    contentDescription = null,
+                    modifier = Modifier.size(40.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+        } else {
+            Icon(
+                Icons.Rounded.Bolt,
+                contentDescription = null,
+                modifier = Modifier.size(56.dp),
+                tint = MaterialTheme.colorScheme.outline,
+            )
+        }
         Spacer(Modifier.height(16.dp))
         Text(
             stringResource(R.string.empty_title),

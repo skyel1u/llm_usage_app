@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -16,7 +17,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -35,7 +35,9 @@ import com.skye.llmusage.ui.HistoryChart
 import com.skye.llmusage.ui.RefreshIcon
 import com.skye.llmusage.ui.UsageHeatmap
 import com.skye.llmusage.ui.glass.GlassConfig
+import com.skye.llmusage.ui.glass.GlassFilterChip
 import com.skye.llmusage.ui.glass.GlassPanel
+import com.skye.llmusage.ui.glass.GlassSectionLabel
 import com.skye.llmusage.ui.glass.LocalGlassChromeInset
 import com.skye.llmusage.ui.glass.LocalGlassController
 import com.skye.llmusage.ui.niceCeil
@@ -71,9 +73,11 @@ fun TrendScreen(
         history.mapNotNull { s -> s.balanceTotal?.let { s.timestamp to it.toFloat() } }
     }
 
-    // 玻璃模式列表延伸到底部 Tab 胶囊下方滚动穿过,预留触达空间
+    // 玻璃模式列表延伸到底部 Tab 胶囊下方滚动穿过,预留触达空间;
+    // 外置节标题的分组形态需要更大的节间距
     val glass = LocalGlassEnabled.current && LocalGlassController.current != null
     val bottomPadding = if (glass) LocalGlassChromeInset.current + 16.dp else 16.dp
+    val listSpacing = if (glass) 24.dp else 16.dp
 
     Column(
         Modifier
@@ -83,10 +87,13 @@ fun TrendScreen(
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(vertical = 8.dp),
+            modifier = Modifier.padding(
+                top = if (glass) 12.dp else 8.dp,
+                bottom = 8.dp,
+            ),
         ) {
             items(accounts, key = { it.id }) { acct ->
-                FilterChip(
+                GlassFilterChip(
                     selected = acct.id == selectedAccountId,
                     onClick = { onSelectAccount(acct.id) },
                     label = { Text(acct.name) },
@@ -95,7 +102,7 @@ fun TrendScreen(
         }
         LazyColumn(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = bottomPadding),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(listSpacing),
             modifier = Modifier.fillMaxSize(),
         ) {
             item {
@@ -195,29 +202,50 @@ fun TrendScreen(
     }
 }
 
+/**
+ * 趋势图表卡:玻璃模式节标题外置为卡片上方小字(iOS 健康/股市形态),
+ * 卡内仅图表内容;经典模式标题仍在卡片内。
+ */
 @Composable
 private fun TrendCard(title: String, content: @Composable () -> Unit) {
-    val body: @Composable () -> Unit = {
-        Column(
-            Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(title, style = MaterialTheme.typography.titleSmall)
-            content()
-        }
+    val glass = LocalGlassEnabled.current && LocalGlassController.current != null
+    if (!glass) {
+        GlassPanel(
+            key = "trend-card-$title",
+            config = GlassConfig.card(),
+            classic = {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                    ),
+                ) {
+                    Column(
+                        Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(title, style = MaterialTheme.typography.titleSmall)
+                        content()
+                    }
+                }
+            },
+        )
+        return
     }
-    GlassPanel(
-        key = "trend-card-$title",
-        config = GlassConfig.card(),
-        classic = {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-                ),
-            ) { body() }
-        },
-        glass = { body() },
-    )
+    Column {
+        GlassSectionLabel(title)
+        GlassPanel(
+            key = "trend-card-$title",
+            config = GlassConfig.card(),
+            modifier = Modifier.fillMaxWidth(),
+            classic = {},
+            glass = {
+                Column(
+                    Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) { content() }
+            },
+        )
+    }
 }
 @Composable
 private fun EmptyTrendState() {

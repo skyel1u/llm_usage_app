@@ -49,6 +49,7 @@ import com.skye.llmusage.data.db.SnapshotEntity
 import com.skye.llmusage.ui.ChartLegend
 import com.skye.llmusage.ui.HistoryChart
 import com.skye.llmusage.ui.RefreshIcon
+import com.skye.llmusage.ui.glass.GlassAlertDialog
 import com.skye.llmusage.ui.glass.GlassConfig
 import com.skye.llmusage.ui.glass.GlassPanel
 import com.skye.llmusage.ui.glass.LocalChromeLayer
@@ -97,7 +98,7 @@ fun DetailScreen(
     }
 
     if (showDelete) {
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = { showDelete = false },
             title = { Text(stringResource(R.string.delete_confirm_title)) },
             text = { Text(stringResource(R.string.delete_confirm_text)) },
@@ -138,15 +139,16 @@ private fun LiquidDetailScreen(
     )
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val chrome = LocalChromeLayer.current
+    val chromeOwner = remember { Any() }
 
     SideEffect {
-        chrome?.topBar?.value = {
+        chrome?.topBar?.set(chromeOwner) {
             DetailTopBar(onBack, onEdit, onDelete, onShowDelete, onRefresh, account, refreshing, useDefaults = false)
         }
         chrome?.topBarAlpha?.floatValue = barAlpha
     }
     DisposableEffect(chrome) {
-        onDispose { chrome?.topBar?.value = null }
+        onDispose { chrome?.topBar?.clear(chromeOwner) }
     }
 
     Column(
