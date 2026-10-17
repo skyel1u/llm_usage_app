@@ -85,13 +85,11 @@ class ChromeLayer {
     val topBar = ChromeSlot<@Composable () -> Unit>()
     val topBarAlpha = mutableFloatStateOf(1f)
     val bottomBar = ChromeSlot<@Composable () -> Unit>()
-    val fab = ChromeSlot<@Composable () -> Unit>()
     val pullRefresh = ChromeSlot<PullRefreshChrome>()
 
     fun clear() {
         topBar.clearAll()
         bottomBar.clearAll()
-        fab.clearAll()
         pullRefresh.clearAll()
     }
 }
@@ -135,23 +133,11 @@ fun ChromeLayerContent(layer: ChromeLayer, controller: GlassController?) {
                     ) {
                         GlassPanel(
                             key = "tab-capsule",
-                            config = GlassConfig.capsule(),
+                            config = GlassConfig.tabBar(),
                             material = GlassMaterial.CHROME,
                             classic = bar,
                             glass = bar,
                         )
-                    }
-                }
-
-                layer.fab.value?.let { fab ->
-                    // 悬于胶囊之上:胶囊(约 64dp)+ 上下边距
-                    Box(
-                        Modifier
-                            .align(Alignment.BottomEnd)
-                            .navigationBarsPadding()
-                            .padding(end = 20.dp, bottom = 86.dp),
-                    ) {
-                        fab()
                     }
                 }
 

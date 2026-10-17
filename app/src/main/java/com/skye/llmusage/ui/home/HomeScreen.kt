@@ -131,15 +131,15 @@ private fun LiquidHomeScreen(
     val ptrState = rememberPullToRefreshState()
     val chromeOwner = remember { Any() }
     SideEffect {
-        chrome?.topBar?.set(chromeOwner) { HomeTopBar(onRefresh, state.refreshing, Color.Transparent) }
+        chrome?.topBar?.set(chromeOwner) {
+            HomeTopBar(onRefresh, state.refreshing, Color.Transparent, onAdd = onAddAccount)
+        }
         chrome?.topBarAlpha?.floatValue = barAlpha
-        chrome?.fab?.set(chromeOwner) { GlassFabPanel(onAddAccount) }
         chrome?.pullRefresh?.set(chromeOwner, PullRefreshChrome(ptrState, state.refreshing))
     }
     DisposableEffect(chrome) {
         onDispose {
             chrome?.topBar?.clear(chromeOwner)
-            chrome?.fab?.clear(chromeOwner)
             chrome?.pullRefresh?.clear(chromeOwner)
         }
     }
@@ -200,12 +200,24 @@ private fun LiquidHomeScreen(
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-private fun HomeTopBar(onRefresh: () -> Unit, refreshing: Boolean, container: Color) {
+private fun HomeTopBar(
+    onRefresh: () -> Unit,
+    refreshing: Boolean,
+    container: Color,
+    onAdd: (() -> Unit)? = null,
+) {
     TopAppBar(
         title = { Text(stringResource(R.string.home_title)) },
         actions = {
-            IconButton(onClick = onRefresh, enabled = !refreshing) {
-                RefreshIcon(spinning = refreshing)
+            if (onAdd != null) {
+                // 玻璃模式:刷新交给下拉手势,顶栏只留安静的"+"
+                IconButton(onClick = onAdd) {
+                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.add_account))
+                }
+            } else {
+                IconButton(onClick = onRefresh, enabled = !refreshing) {
+                    RefreshIcon(spinning = refreshing)
+                }
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = container),
@@ -294,7 +306,7 @@ private fun EmptyState(onAdd: () -> Unit, showFab: Boolean = true) {
                     .size(88.dp)
                     .clip(CircleShape)
                     .background(
-                        if (LocalGlassDark.current) Color(0x591E2338) else Color(0x59FBFAFF),
+                        if (LocalGlassDark.current) Color(0x662A3252) else Color(0x59FBFAFF),
                     ),
             ) {
                 Icon(
@@ -325,7 +337,12 @@ private fun EmptyState(onAdd: () -> Unit, showFab: Boolean = true) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(24.dp))
-        if (showFab) ClassicFab(onClick = onAdd)
+        if (showFab) {
+            ClassicFab(onClick = onAdd)
+        } else {
+            // 玻璃模式:空屏时"添加"是唯一重要的事,给一个醒目的主色胶囊按钮
+            GlassPrimaryButton(onClick = onAdd)
+        }
     }
 }
 
@@ -340,35 +357,29 @@ private fun ClassicFab(onClick: () -> Unit) {
     )
 }
 
-/** 玻璃模式添加账户 FAB:胶囊玻璃 + 按压回弹,由 chrome 层渲染 */
+/** 玻璃模式空态主按钮:主题色实心胶囊,带按压回弹 */
 @Composable
-private fun GlassFabPanel(onClick: () -> Unit) {
-    GlassPanel(
-        key = "home-fab",
-        config = GlassConfig.capsule(),
-        material = GlassMaterial.CHROME,
-        classic = {},
-        glass = {
-            Row(
-                modifier = Modifier
-                    .pressableGlass(onClick = onClick)
-                    .padding(horizontal = 20.dp, vertical = 15.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Icon(
-                    Icons.Filled.Add,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    stringResource(R.string.add_account),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-        },
-    )
+private fun GlassPrimaryButton(onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .pressableGlass(onClick = onClick)
+            .clip(RoundedCornerShape(50))
+            .background(MaterialTheme.colorScheme.primary)
+            .padding(horizontal = 24.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(
+            Icons.Filled.Add,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onPrimary,
+        )
+        Text(
+            stringResource(R.string.add_account),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onPrimary,
+        )
+    }
 }
 
 @Composable
@@ -443,7 +454,7 @@ fun AccountCard(account: AccountUi, onClick: () -> Unit, modifier: Modifier = Mo
                 .animateContentSize(spring(dampingRatio = 0.9f, stiffness = 300f)),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            // 头部:名称 + 类型徽章;玻璃模式下徽章圆角与卡片曲率同心
+            // 头部:名称;经典模式保留类型徽章,玻璃模式将类型并入下方说明行(去装饰)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -465,17 +476,18 @@ fun AccountCard(account: AccountUi, onClick: () -> Unit, modifier: Modifier = Mo
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
                 )
-                Surface(
-                    shape = if (LocalGlassEnabled.current) RoundedCornerShape(9.dp)
-                    else MaterialTheme.shapes.small,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                ) {
-                    Text(
-                        label,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                    )
+                if (!LocalGlassEnabled.current) {
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    ) {
+                        Text(
+                            label,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        )
+                    }
                 }
             }
 
@@ -493,10 +505,14 @@ fun AccountCard(account: AccountUi, onClick: () -> Unit, modifier: Modifier = Mo
 
             when (account.type) {
                 AccountType.CODING_PLAN -> {
-                    // 始终显示提供商(Kimi/MiniMax 无套餐等级),有等级时追加
+                    // 始终显示提供商(Kimi/MiniMax 无套餐等级),有等级时追加;
+                    // 玻璃模式并入类型说明,替代徽章盒子
+                    val glassNow = LocalGlassEnabled.current
+                    val providerCaption = account.level
+                        ?.let { "${account.provider.displayName} $it" }
+                        ?: account.provider.displayName
                     Text(
-                        account.level?.let { "${account.provider.displayName} $it" }
-                            ?: account.provider.displayName,
+                        if (glassNow) "$providerCaption · Coding Plan" else providerCaption,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -513,6 +529,14 @@ fun AccountCard(account: AccountUi, onClick: () -> Unit, modifier: Modifier = Mo
                     }
                 }
                 AccountType.PAYG -> {
+                    // 徽章移除后,PAYG 的提供商/类型信息由说明行承接(与 Coding Plan 一致)
+                    if (LocalGlassEnabled.current) {
+                        Text(
+                            "${account.provider.displayName} · PAYG",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     val balance = account.balance
                     if (balance != null) {
                         Row(verticalAlignment = Alignment.Bottom) {

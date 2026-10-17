@@ -16,8 +16,8 @@ android {
         applicationId = "com.skye.llmusage"
         minSdk = 26
         targetSdk = 36
-        versionCode = 7
-        versionName = "1.3.0"
+        versionCode = 8
+        versionName = "1.4.0"
     }
     // 固定 release 签名:本地读仓库根 keystore.properties(gitignore),
     // CI 由 Secrets 生成同名文件;两边同一把 key,覆盖安装不再签名冲突。

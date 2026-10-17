@@ -34,7 +34,7 @@ data class GlassConfig(
         /** 错误提示条(CARD 材质) */
         fun notice() = GlassConfig(cornerRadiusDp = 12f)
 
-        /** 悬浮胶囊(CHROME 材质):Tab 栏 / FAB,圆角自动成胶囊 */
+        /** 悬浮胶囊(CHROME 材质):单按钮/圆片控件,圆角自动成胶囊 */
         fun capsule() = GlassConfig(
             cornerRadiusDp = 99f,
             refractionHeightDp = 14f,
@@ -42,7 +42,22 @@ data class GlassConfig(
             blurRadiusPx = 18f,
             dispersion = 0.25f,
             lightTint = GlassTint(1f, 1f, 1f, 0.10f),
-            darkTint = GlassTint(0.10f, 0.11f, 0.20f, 0.24f),
+            darkTint = GlassTint(0.13f, 0.14f, 0.24f, 0.34f),
+        )
+
+        /**
+         * 底部 Tab 栏(CHROME 材质):圆角矩形而非完整胶囊——Apple 用胶囊
+         * 表达单一控件,用圆角矩形表达容器/栏(iOS 26 悬浮 Tab 栏形态),
+         * 30dp 圆角与条目药丸(~18dp)保持同心层级
+         */
+        fun tabBar() = GlassConfig(
+            cornerRadiusDp = 30f,
+            refractionHeightDp = 14f,
+            refractionOffsetDp = 40f,
+            blurRadiusPx = 18f,
+            dispersion = 0.25f,
+            lightTint = GlassTint(1f, 1f, 1f, 0.10f),
+            darkTint = GlassTint(0.13f, 0.14f, 0.24f, 0.34f),
         )
 
         /** 顶栏(CHROME 材质):全宽无圆角,磨砂模糊滚动内容 */
@@ -53,7 +68,7 @@ data class GlassConfig(
             blurRadiusPx = 22f,
             dispersion = 0.28f,
             lightTint = GlassTint(1f, 1f, 1f, 0.16f),
-            darkTint = GlassTint(0.09f, 0.10f, 0.18f, 0.19f),
+            darkTint = GlassTint(0.10f, 0.11f, 0.20f, 0.22f),
         )
     }
 }

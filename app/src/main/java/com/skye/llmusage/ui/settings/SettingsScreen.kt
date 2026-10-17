@@ -235,26 +235,28 @@ private fun SettingsGlassSections(
                     )
                 }
                 RowDivider()
-                // 动态取色(Android 12+ 跟随壁纸;关闭回退内置靛蓝色板)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            stringResource(R.string.settings_dynamic_color),
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                        Text(
-                            stringResource(R.string.settings_dynamic_color_desc),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                // 动态取色仅作用于经典外观(玻璃模式使用固定色板),不提供无效开关
+                if (appStyle != AppStyle.LIQUID_GLASS) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                stringResource(R.string.settings_dynamic_color),
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                            Text(
+                                stringResource(R.string.settings_dynamic_color_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Spacer(Modifier.width(16.dp))
+                        Switch(checked = dynamicColor, onCheckedChange = onDynamicColorChange)
                     }
-                    Spacer(Modifier.width(16.dp))
-                    Switch(checked = dynamicColor, onCheckedChange = onDynamicColorChange)
                 }
             }
         },

@@ -292,8 +292,13 @@ private fun GlassTabRow(currentRoute: String?, onSelect: (String) -> Unit) {
             val tint = if (selected) MaterialTheme.colorScheme.primary
             else MaterialTheme.colorScheme.onSurfaceVariant
             val pill by animateColorAsState(
-                targetValue = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
-                else Color.Transparent,
+                targetValue = if (selected) {
+                    MaterialTheme.colorScheme.primary.copy(
+                        alpha = if (LocalGlassDark.current) 0.18f else 0.14f,
+                    )
+                } else {
+                    Color.Transparent
+                },
                 animationSpec = tween(180),
                 label = "tabPill",
             )

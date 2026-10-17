@@ -37,7 +37,8 @@ fun GlassFilterChip(
         modifier = modifier,
         shape = RoundedCornerShape(50),
         colors = FilterChipDefaults.filterChipColors(
-            containerColor = if (dark) Color(0x3D1E2338) else Color(0x66FBFAFF),
+            // 深色未选为带蓝色调的暗面板(在壁纸/卡片上均可辨),选中为主题浅靛蓝填充
+            containerColor = if (dark) Color(0x3D262E4A) else Color(0x66FBFAFF),
             labelColor = MaterialTheme.colorScheme.onSurface,
             selectedContainerColor = MaterialTheme.colorScheme.primary,
             selectedLabelColor = MaterialTheme.colorScheme.onPrimary,

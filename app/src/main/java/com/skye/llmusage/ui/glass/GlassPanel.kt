@@ -122,8 +122,10 @@ fun GlassPanel(
     }
 }
 
+// 深色卡片为蓝调石墨并整体抬升一档亮度(iOS 深色层级:背景最暗,卡片更亮),
+// 留 4% 透明度让壁纸辉光极轻微地透入,保留材质感
 internal val CardLightSurface = Color(0xF8FBFAFF)
-internal val CardDarkSurface = Color(0xF20F1116)
+internal val CardDarkSurface = Color(0xF51B1E2E)
 internal val ShadowLight = Color(0x1E2E3B8F)
 internal val ShadowDark = Color(0x66000000)
 
@@ -144,7 +146,7 @@ private fun Modifier.liquidEdge(
     )
     val stroke = 1.dp.toPx()
     val (topA, bottomA) = when {
-        dark -> if (strengthen) 0.32f to 0.06f else 0.22f to 0.04f
+        dark -> if (strengthen) 0.40f to 0.06f else 0.30f to 0.04f
         else -> if (strengthen) 0.70f to 0.10f else 0.55f to 0.08f
     }
     drawRoundRect(
@@ -155,7 +157,8 @@ private fun Modifier.liquidEdge(
         cornerRadius = CornerRadius(radius, radius),
         style = Stroke(stroke),
     )
-    val highlightA = if (dark) 0.08f else 0.16f
+    // 深色下高光更亮,补偿玻璃在暗背景中的边缘可读性
+    val highlightA = if (dark) 0.10f else 0.16f
     drawRect(
         brush = Brush.verticalGradient(
             0f to Color.White.copy(alpha = highlightA),

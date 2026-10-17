@@ -289,9 +289,9 @@ private fun EditFormFields(
         }
     }
 
-    // 玻璃模式输入框垫一层磨砂底,避免壁纸直透文字;经典模式保持默认
+    // 玻璃模式输入框:浅色垫磨砂底;深色为"下沉暗井"(iOS 深色输入惯例,比卡片更暗)
     val fieldColors = if (LocalGlassEnabled.current) {
-        val container = if (LocalGlassDark.current) Color(0x331E2338) else Color(0x40FBFAFF)
+        val container = if (LocalGlassDark.current) Color(0x800F1320) else Color(0x40FBFAFF)
         OutlinedTextFieldDefaults.colors(
             unfocusedContainerColor = container,
             focusedContainerColor = container,

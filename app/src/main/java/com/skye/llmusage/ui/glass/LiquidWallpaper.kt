@@ -56,12 +56,13 @@ private val LightSpec = Triple(
 )
 
 private val DarkSpec = Triple(
-    Color(0xFF0B0D1A),
-    Color(0xFF121830),
+    Color(0xFF05060F),
+    Color(0xFF0C1124),
     listOf(
-        BlobSpec(0.15f, 0.10f, 0.85f, Color(0x804355B9)),
-        BlobSpec(0.85f, 0.28f, 0.70f, Color(0x592E3B8F)),
-        BlobSpec(0.55f, 0.85f, 0.80f, Color(0x402B6E8F)),
-        BlobSpec(0.95f, 0.95f, 0.55f, Color(0x40314E9E)),
+        // 深色壁纸:基底近黑,色块为低透明度的深色辉光,保持底层最暗(iOS 抬升层级的前提)
+        BlobSpec(0.08f, 0.05f, 0.70f, Color(0x594355B9)),
+        BlobSpec(0.90f, 0.18f, 0.55f, Color(0x363D5BD9)),
+        BlobSpec(0.55f, 0.90f, 0.65f, Color(0x2E1E6E85)),
+        BlobSpec(0.93f, 0.97f, 0.50f, Color(0x249A6B4F)),
     ),
 )

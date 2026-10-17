@@ -87,18 +87,19 @@ private val GlassDarkScheme = darkColorScheme(primary = IndigoDim).copy(
     primaryContainer = IndigoDeep,
     onPrimaryContainer = IndigoDim,
     secondary = Color(0xFFC5C4DD),
-    secondaryContainer = Color(0x66343A63),
+    secondaryContainer = Color(0x80323A5E),
     onSecondaryContainer = Color(0xFFE1E0FA),
     background = Color.Transparent,
     onBackground = Color(0xFFE4E1E9),
     surface = Color.Transparent,
-    onSurface = Color(0xFFEDEBF5),
-    surfaceVariant = Color(0x33FFFFFF),
-    onSurfaceVariant = Color(0xFFC7C5D0),
-    surfaceContainerLowest = Color(0x401E2338),
-    surfaceContainer = Color(0x331E2338),
-    surfaceContainerHigh = Color(0x4D1E2338),
-    surfaceContainerHighest = Color(0x661E2338),
+    onSurface = Color(0xFFECEAF4),
+    surfaceVariant = Color(0x24FFFFFF),
+    onSurfaceVariant = Color(0xFFC6C4D2),
+    // 深色抬升层级:白色叠加的递进亮度,让徽章/小控件在卡片上"浮"起来
+    surfaceContainerLowest = Color(0x14FFFFFF),
+    surfaceContainer = Color(0x1AFFFFFF),
+    surfaceContainerHigh = Color(0x24FFFFFF),
+    surfaceContainerHighest = Color(0x2EFFFFFF),
 )
 
 /** 阈值色:与参考实现一致,<70 主题色 / ≥70 橙 / ≥90 红 */
