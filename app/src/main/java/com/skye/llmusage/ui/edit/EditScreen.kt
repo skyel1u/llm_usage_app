@@ -1,19 +1,11 @@
 package com.skye.llmusage.ui.edit
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -21,13 +13,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonShapes
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -35,20 +30,14 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -58,18 +47,9 @@ import androidx.compose.ui.unit.dp
 import com.skye.llmusage.R
 import com.skye.llmusage.data.AccountType
 import com.skye.llmusage.data.Provider
-import com.skye.llmusage.ui.glass.GlassConfig
-import com.skye.llmusage.ui.glass.GlassAlertDialog
-import com.skye.llmusage.ui.glass.GlassFilterChip
-import com.skye.llmusage.ui.glass.GlassPanel
-import com.skye.llmusage.ui.glass.LocalChromeLayer
-import com.skye.llmusage.ui.glass.LocalGlassChromeInset
-import com.skye.llmusage.ui.glass.LocalGlassController
-import com.skye.llmusage.ui.glass.LocalGlassDark
-import com.skye.llmusage.ui.theme.LocalGlassEnabled
 
-/** 添加/编辑账户:类型 → 提供商 → 名称/Key */
-@OptIn(ExperimentalMaterial3Api::class)
+/** 添加/编辑账户:类型 → 提供商 → 名称/Key;保存按钮带 Expressive 按压形变 */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun EditScreen(
     initialAccountId: Long?,
@@ -102,35 +82,46 @@ fun EditScreen(
     }
 
     val isEdit = initialAccountId != null
-    val glass = LocalGlassEnabled.current && LocalGlassController.current != null
 
-    if (glass) {
-        LiquidEditScreen(initialAccountId, isEdit, onBack, onSave, type, provider, name, apiKey, keyError, showKey,
-            { keyError = true },
-            { type = it }, { provider = it }, { name = it }, { apiKey = it; keyError = false }, { showKey = !showKey })
-    } else {
-        Scaffold(
-            topBar = { EditTopBar(isEdit, onBack, useDefaults = true) },
-        ) { padding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                EditFormFields(
-                    initialAccountId, type, provider, name, apiKey, keyError, showKey,
-                    { keyError = true }, onSave,
-                    { type = it }, { provider = it }, { name = it }, { apiKey = it; keyError = false }, { showKey = !showKey },
-                )
-            }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        stringResource(
+                            if (isEdit) R.string.edit_account else R.string.add_account,
+                        ),
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back),
+                        )
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            EditFormFields(
+                initialAccountId, type, provider, name, apiKey, keyError, showKey,
+                { keyError = true }, onSave,
+                { type = it }, { provider = it }, { name = it }, { apiKey = it; keyError = false }, { showKey = !showKey },
+            )
         }
     }
 
     if (duplicateName != null) {
-        GlassAlertDialog(
+        AlertDialog(
             onDismissRequest = onDismissDuplicate,
             title = { Text(stringResource(R.string.duplicate_key_title)) },
             text = { Text(stringResource(R.string.duplicate_key_text, duplicateName)) },
@@ -144,99 +135,7 @@ fun EditScreen(
     }
 }
 
-/** 玻璃模式编辑页:表单纸面卡滚动穿层,顶栏滚动浮现 */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun LiquidEditScreen(
-    initialAccountId: Long?,
-    isEdit: Boolean,
-    onBack: () -> Unit,
-    onSave: (Long?, String, Provider, String) -> Unit,
-    type: String,
-    provider: String,
-    name: String,
-    apiKey: String,
-    keyError: Boolean,
-    showKey: Boolean,
-    onKeyError: () -> Unit,
-    onTypeChange: (String) -> Unit,
-    onProviderChange: (String) -> Unit,
-    onNameChange: (String) -> Unit,
-    onApiKeyChange: (String) -> Unit,
-    onToggleShowKey: () -> Unit,
-) {
-    val scrollState = rememberScrollState()
-    val scrolled by remember { derivedStateOf { scrollState.value > 0 } }
-    val barAlpha by animateFloatAsState(
-        targetValue = if (scrolled) 1f else 0f,
-        animationSpec = tween(240),
-        label = "editBar",
-    )
-    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val chrome = LocalChromeLayer.current
-    val chromeOwner = remember { Any() }
-
-    SideEffect {
-        chrome?.topBar?.set(chromeOwner) { EditTopBar(isEdit, onBack, useDefaults = false) }
-        chrome?.topBarAlpha?.floatValue = barAlpha
-    }
-    DisposableEffect(chrome) {
-        onDispose { chrome?.topBar?.clear(chromeOwner) }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(horizontal = 16.dp),
-    ) {
-        Spacer(Modifier.height(statusBarTop + 80.dp))
-        GlassPanel(
-            key = "edit-form",
-            config = GlassConfig.card(),
-            modifier = Modifier.fillMaxWidth(),
-            classic = {},
-            glass = {
-                Column(
-                    Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    EditFormFields(
-                        initialAccountId, type, provider, name, apiKey, keyError, showKey,
-                        onKeyError, onSave,
-                        onTypeChange, onProviderChange, onNameChange, onApiKeyChange, onToggleShowKey,
-                    )
-                }
-            },
-        )
-        Spacer(Modifier.height(LocalGlassChromeInset.current + 24.dp))
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun EditTopBar(isEdit: Boolean, onBack: () -> Unit, useDefaults: Boolean) {
-    TopAppBar(
-        title = {
-            Text(
-                stringResource(
-                    if (isEdit) R.string.edit_account else R.string.add_account,
-                ),
-            )
-        },
-        navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.action_back),
-                )
-            }
-        },
-        colors = if (useDefaults) TopAppBarDefaults.topAppBarColors()
-        else TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
-    )
-}
-
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun EditFormFields(
     initialAccountId: Long?,
@@ -276,28 +175,17 @@ private fun EditFormFields(
     // 提供商选择(数量多,FlowRow 自动换行)
     Text("提供商", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
     val providers = Provider.entries.filter { it.type.name == type }
-    androidx.compose.foundation.layout.FlowRow(
+    FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         providers.forEach { p ->
-            GlassFilterChip(
+            FilterChip(
                 selected = provider == p.name,
                 onClick = { onProviderChange(p.name) },
                 label = { Text(p.displayName) },
             )
         }
-    }
-
-    // 玻璃模式输入框:浅色垫磨砂底;深色为"下沉暗井"(iOS 深色输入惯例,比卡片更暗)
-    val fieldColors = if (LocalGlassEnabled.current) {
-        val container = if (LocalGlassDark.current) Color(0x800F1320) else Color(0x40FBFAFF)
-        OutlinedTextFieldDefaults.colors(
-            unfocusedContainerColor = container,
-            focusedContainerColor = container,
-        )
-    } else {
-        OutlinedTextFieldDefaults.colors()
     }
 
     OutlinedTextField(
@@ -306,7 +194,6 @@ private fun EditFormFields(
         label = { Text(stringResource(R.string.field_name)) },
         supportingText = { Text(stringResource(R.string.field_name_support)) },
         singleLine = true,
-        colors = fieldColors,
         modifier = Modifier.fillMaxWidth(),
     )
 
@@ -325,7 +212,6 @@ private fun EditFormFields(
             )
         },
         isError = keyError,
-        colors = fieldColors,
         visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
         trailingIcon = {
             IconButton(onClick = onToggleShowKey) {
@@ -342,6 +228,7 @@ private fun EditFormFields(
         modifier = Modifier.fillMaxWidth(),
     )
 
+    // Expressive 按压形变:平时全圆角药丸,按下挤压到 12dp 圆角
     Button(
         onClick = {
             if (apiKey.isBlank()) {
@@ -350,6 +237,10 @@ private fun EditFormFields(
                 onSave(initialAccountId, name, Provider.valueOf(provider), apiKey)
             }
         },
+        shapes = ButtonShapes(
+            shape = MaterialTheme.shapes.large,
+            pressedShape = RoundedCornerShape(12.dp),
+        ),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Text(stringResource(R.string.save_and_refresh))

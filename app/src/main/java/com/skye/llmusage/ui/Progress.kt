@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -107,7 +107,7 @@ fun FiveHourRing(tier: Tier, modifier: Modifier = Modifier, ringSize: Dp = 108.d
     }
 }
 
-/** 周限制线性进度条 */
+/** 周限制线性进度:Expressive 波浪进度条,波幅随进度推进 */
 @Composable
 fun WeeklyBar(tier: Tier, modifier: Modifier = Modifier) {
     val resetMs = tier.resetMs
@@ -149,7 +149,7 @@ fun WeeklyBar(tier: Tier, modifier: Modifier = Modifier) {
                 }
             }
         }
-        LinearProgressIndicator(
+        LinearWavyProgressIndicator(
             progress = { animatedPct / 100f },
             color = color,
             trackColor = MaterialTheme.colorScheme.surfaceVariant,

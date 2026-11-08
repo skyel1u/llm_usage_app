@@ -10,14 +10,15 @@ plugins {
 
 android {
     namespace = "com.skye.llmusage"
-    compileSdk = 36
+    // material3 1.5.0 要求 compileSdk 37;targetSdk 保持 36 不引入新运行时行为
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.skye.llmusage"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "1.4.0"
+        versionCode = 9
+        versionName = "2.0.0"
     }
     // 固定 release 签名:本地读仓库根 keystore.properties(gitignore),
     // CI 由 Secrets 生成同名文件;两边同一把 key,覆盖安装不再签名冲突。
@@ -70,11 +71,14 @@ ksp {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2025.06.01")
+    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3")
+    // Expressive 全家桶只在 1.5.0 线:显式锁定版本覆盖 BOM(其映射到 1.4.0)。
+    implementation("androidx.compose.material3:material3:1.5.0-rc01")
+    // 多边形/形状变形(MaterialShapes 底层,stable)。
+    implementation("androidx.graphics:graphics-shapes:1.1.0")
     implementation("androidx.compose.material:material-icons-extended")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
@@ -92,9 +96,6 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
 
-    // 液态玻璃效果:真实折射/色散(AGSL,仅 API 33+ 生效)。
-    // 用 1.0.3:≥1.0.4 的 AAR 要求 compileSdk 37,本项目为 36。
-    implementation("com.qmdeve.liquidglass:core:1.0.3")
     implementation("androidx.datastore:datastore-preferences:1.1.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
